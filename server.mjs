@@ -800,7 +800,7 @@ function buildAffineCaseTranslation(translation) {
 Aquí $A=I$, de modo que $A-I=0$ y la ecuación $(A-I)c=-t$ se reduce a $0=-t$. Como $t\\neq 0$, no hay punto fijo: $F$ es una traslación pura.
 
 \\subsection*{Paso 8. Elección de base para normalizar la traslación}
-Puesto que la parte lineal es la identidad, en cualquier base la aplicación sigue teniendo la forma ``sumar el mismo vector''. Para que esa suma quede lo más simple posible, se toma como primer vector de la base la propia dirección de la traslación y como segundo un vector no paralelo:
+Puesto que la parte lineal es la identidad, en cualquier base la aplicación sigue siendo una suma por el mismo vector. Para que esa suma quede lo más simple posible, se toma como primer vector de la base la propia dirección de la traslación y como segundo un vector no paralelo:
 \\[
 v_1=t=${vecToLatex(translation)},\\qquad v_2=${vecToLatex(v2)},\\qquad P=[v_1\\ v_2]=${matrixToLatex(P)}.
 \\]
