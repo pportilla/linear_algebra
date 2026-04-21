@@ -65,19 +65,20 @@ export function formatMatrixEntry(value: number) {
 }
 
 function symbolicNumber(value: number) {
-  const expression = expressionFromNumber(value)
-
-  if (!expression) {
-    throw new Error(`No se pudo convertir ${value} en una expresión racional.`)
-  }
-
-  return expression
+  return expressionFromNumber(value)
 }
 
 function symbolicDistinctRealEigenvalues(trace: number, discriminant: number) {
-  const halfTrace = scaleExpression(symbolicNumber(trace), 1, 2)
+  const traceExpression = symbolicNumber(trace)
+  const rootExpression = squareRootExpressionFromNumber(discriminant) ?? symbolicNumber(Math.sqrt(discriminant))
+
+  if (!traceExpression || !rootExpression) {
+    return null
+  }
+
+  const halfTrace = scaleExpression(traceExpression, 1, 2)
   const halfRoot = scaleExpression(
-    squareRootExpressionFromNumber(discriminant) ?? symbolicNumber(Math.sqrt(discriminant)),
+    rootExpression,
     1,
     2,
   )
@@ -89,13 +90,16 @@ function symbolicDistinctRealEigenvalues(trace: number, discriminant: number) {
 }
 
 function symbolicComplexEigenParts(trace: number, discriminant: number) {
+  const traceExpression = symbolicNumber(trace)
+  const imaginaryExpression = squareRootExpressionFromNumber(-discriminant) ?? symbolicNumber(Math.sqrt(-discriminant))
+
+  if (!traceExpression || !imaginaryExpression) {
+    return null
+  }
+
   return {
-    realPart: scaleExpression(symbolicNumber(trace), 1, 2),
-    imaginaryPart: scaleExpression(
-      squareRootExpressionFromNumber(-discriminant) ?? symbolicNumber(Math.sqrt(-discriminant)),
-      1,
-      2,
-    ),
+    realPart: scaleExpression(traceExpression, 1, 2),
+    imaginaryPart: scaleExpression(imaginaryExpression, 1, 2),
   }
 }
 
@@ -276,6 +280,8 @@ export function classifyLinearMap(sourceMatrix: Matrix2): LinearAnalysis {
     const lambda1 = (trace + root) / 2
     const lambda2 = (trace - root) / 2
     const symbolicEigenvalues = symbolicDistinctRealEigenvalues(trace, discriminant)
+    const lambda1Label = symbolicEigenvalues ? formatPlainExpression(symbolicEigenvalues.lambda1) : formatMatrixEntry(lambda1)
+    const lambda2Label = symbolicEigenvalues ? formatPlainExpression(symbolicEigenvalues.lambda2) : formatMatrixEntry(lambda2)
     return {
       sourceMatrix,
       canonicalMatrix: [[lambda1, 0], [0, lambda2]],
@@ -287,7 +293,7 @@ export function classifyLinearMap(sourceMatrix: Matrix2): LinearAnalysis {
       steps: [
         `Primero se calculan la traza ${formatMatrixEntry(trace)} y el determinante ${formatMatrixEntry(determinant)}.`,
         `Después se mira el discriminante del polinomio característico, que vale ${formatMatrixEntry(discriminant)} y sale positivo.`,
-        `Eso da dos autovalores reales distintos: ${formatPlainExpression(symbolicEigenvalues.lambda1)} y ${formatPlainExpression(symbolicEigenvalues.lambda2)}.`,
+        `Eso da dos autovalores reales distintos: ${lambda1Label} y ${lambda2Label}.`,
         'Como aparecen dos direcciones propias independientes, la matriz se puede diagonalizar.',
         'La forma canónica queda en la diagonal formada por esos dos autovalores.',
       ],
@@ -343,6 +349,8 @@ export function classifyLinearMap(sourceMatrix: Matrix2): LinearAnalysis {
   const realPart = trace / 2
   const imaginaryPart = Math.sqrt(-discriminant) / 2
   const symbolicParts = symbolicComplexEigenParts(trace, discriminant)
+  const realPartLabel = symbolicParts ? formatPlainExpression(symbolicParts.realPart) : formatMatrixEntry(realPart)
+  const imaginaryPartLabel = symbolicParts ? formatPlainExpression(symbolicParts.imaginaryPart) : formatMatrixEntry(imaginaryPart)
   return {
     sourceMatrix,
     canonicalMatrix: [[realPart, -imaginaryPart], [imaginaryPart, realPart]],
@@ -354,7 +362,7 @@ export function classifyLinearMap(sourceMatrix: Matrix2): LinearAnalysis {
     steps: [
       `Primero se calculan la traza ${formatMatrixEntry(trace)} y el determinante ${formatMatrixEntry(determinant)}.`,
       `Después se comprueba que el discriminante vale ${formatMatrixEntry(discriminant)} y es negativo.`,
-      `Eso produce el par complejo conjugado ${formatPlainExpression(symbolicParts.realPart)} ± ${formatPlainExpression(symbolicParts.imaginaryPart)} i.`,
+      `Eso produce el par complejo conjugado ${realPartLabel} ± ${imaginaryPartLabel} i.`,
       'Como estamos trabajando con matrices reales, no se deja la forma canónica en diagonal compleja.',
       'En su lugar se usa el bloque real equivalente, que recoge la misma rotación y la misma dilatación.',
     ],
