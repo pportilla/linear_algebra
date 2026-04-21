@@ -303,14 +303,14 @@ export function classifyLinearMap(sourceMatrix: Matrix2): LinearAnalysis {
       caseId: 'distinct-real',
       caseLabel: 'Dos autovalores reales distintos',
       canonicalTitle: 'Forma de Jordan',
-      shortText: 'La matriz es diagonalizable y su forma de Jordan es diagonal.',
+      shortText: 'La matriz se puede diagonalizar: aparecen dos direcciones propias independientes y la forma canónica queda en diagonal.',
       canvasSubtitle: 'El plano inferior usa la base estándar y la matriz diagonal semejante a la original.',
       steps: [
-        `Se calcula la traza ${formatMatrixEntry(trace)} y el determinante ${formatMatrixEntry(determinant)}.`,
-        `El discriminante del polinomio característico vale ${formatMatrixEntry(discriminant)} y es positivo.`,
-        `Los autovalores reales distintos son ${formatMatrixEntry(lambda1)} y ${formatMatrixEntry(lambda2)}.`,
-        'Con dos autovalores reales distintos, la matriz es diagonalizable.',
-        'La forma de Jordan coincide con la matriz diagonal formada por esos autovalores.',
+        `Primero se calculan la traza ${formatMatrixEntry(trace)} y el determinante ${formatMatrixEntry(determinant)}.`,
+        `Después se mira el discriminante del polinomio característico, que vale ${formatMatrixEntry(discriminant)} y sale positivo.`,
+        `Eso da dos autovalores reales distintos: ${formatMatrixEntry(lambda1)} y ${formatMatrixEntry(lambda2)}.`,
+        'Como aparecen dos direcciones propias independientes, la matriz se puede diagonalizar.',
+        'La forma canónica queda en la diagonal formada por esos dos autovalores.',
       ],
       trace,
       determinant,
@@ -327,13 +327,13 @@ export function classifyLinearMap(sourceMatrix: Matrix2): LinearAnalysis {
         caseId: 'scalar',
         caseLabel: 'Matriz escalar',
         canonicalTitle: 'Forma de Jordan',
-        shortText: 'La matriz es un múltiplo de la identidad.',
+        shortText: 'La matriz actúa igual en todas las direcciones: no es más que un múltiplo de la identidad.',
         canvasSubtitle: 'La forma canónica coincide con un múltiplo de la identidad.',
         steps: [
-          `La traza es ${formatMatrixEntry(trace)} y el determinante es ${formatMatrixEntry(determinant)}.`,
-          `El discriminante es nulo, así que el único autovalor es ${formatMatrixEntry(lambda)}.`,
-          'La matriz coincide con ese autovalor por la identidad.',
-          'Por eso no aparece ningún bloque de Jordan no trivial.',
+          `Primero se calculan la traza ${formatMatrixEntry(trace)} y el determinante ${formatMatrixEntry(determinant)}.`,
+          `El discriminante es nulo, así que sólo aparece el autovalor ${formatMatrixEntry(lambda)}.`,
+          'Al comparar la matriz con ese valor por la identidad, se ve que coinciden exactamente.',
+          'Por eso no aparece ningún bloque de Jordan no trivial y la matriz ya está en su forma más simple.',
         ],
         trace,
         determinant,
@@ -347,13 +347,13 @@ export function classifyLinearMap(sourceMatrix: Matrix2): LinearAnalysis {
       caseId: 'jordan-block',
       caseLabel: 'Autovalor doble con bloque de Jordan',
       canonicalTitle: 'Forma de Jordan',
-      shortText: 'Hay un autovalor doble, pero la matriz no es escalar, así que aparece un único bloque de tamaño dos.',
+      shortText: 'Hay un autovalor doble, pero sólo una dirección propia. Por eso aparece un único bloque de Jordan de tamaño dos.',
       canvasSubtitle: 'El plano inferior representa el bloque de Jordan real correspondiente.',
       steps: [
-        `La traza es ${formatMatrixEntry(trace)} y el determinante es ${formatMatrixEntry(determinant)}.`,
-        `El discriminante es nulo, así que el autovalor doble es ${formatMatrixEntry(lambda)}.`,
-        'La matriz no es escalar, luego el espacio propio no tiene dimensión dos.',
-        'En dimensión dos eso fuerza un único bloque de Jordan de tamaño dos.',
+        `Primero se calculan la traza ${formatMatrixEntry(trace)} y el determinante ${formatMatrixEntry(determinant)}.`,
+        `El discriminante vuelve a salir nulo, así que el autovalor doble es ${formatMatrixEntry(lambda)}.`,
+        'Sin embargo, la matriz no es escalar, de modo que no aparecen dos direcciones propias independientes.',
+        'En dimensión dos eso obliga a que la forma canónica tenga un único bloque de Jordan de tamaño dos.',
       ],
       trace,
       determinant,
@@ -369,14 +369,14 @@ export function classifyLinearMap(sourceMatrix: Matrix2): LinearAnalysis {
     caseId: 'complex-pair',
     caseLabel: 'Par complejo conjugado',
     canonicalTitle: 'Bloque canónico real',
-    shortText: 'Sobre los reales se usa el bloque canónico real asociado al par complejo conjugado.',
+    shortText: 'Como no hay autovalores reales, se usa el bloque real equivalente que describe la misma rotación-dilatación.',
     canvasSubtitle: 'El plano inferior muestra el bloque real equivalente a la rotación-dilatación.',
     steps: [
-      `La traza es ${formatMatrixEntry(trace)} y el determinante es ${formatMatrixEntry(determinant)}.`,
-      `El discriminante vale ${formatMatrixEntry(discriminant)} y es negativo.`,
-      `Los autovalores complejos son ${formatMatrixEntry(realPart)} ± ${formatMatrixEntry(imaginaryPart)} i.`,
-      'No existe una forma de Jordan real con entradas reales para este caso.',
-      'Se usa el bloque real asociado a la rotación y dilatación correspondiente.',
+      `Primero se calculan la traza ${formatMatrixEntry(trace)} y el determinante ${formatMatrixEntry(determinant)}.`,
+      `Después se comprueba que el discriminante vale ${formatMatrixEntry(discriminant)} y es negativo.`,
+      `Eso produce el par complejo conjugado ${formatMatrixEntry(realPart)} ± ${formatMatrixEntry(imaginaryPart)} i.`,
+      'Como estamos trabajando con matrices reales, no se deja la forma canónica en diagonal compleja.',
+      'En su lugar se usa el bloque real equivalente, que recoge la misma rotación y la misma dilatación.',
     ],
     trace,
     determinant,
@@ -510,10 +510,10 @@ export function canonicalizeAffineMap(
 
     const shortText =
       fixedSet.kind === 'plane'
-        ? 'La aplicación coincide con la identidad tras la reducción afín, de modo que todo punto del plano es fijo.'
+        ? 'Después de la reducción afín, la aplicación coincide con la identidad y todo punto del plano queda fijo.'
         : fixedSet.kind === 'line'
-          ? 'Existe una familia afín unidimensional de puntos fijos. Tras mover el origen a uno de ellos, la clasificación afín se reduce a la parte lineal.'
-          : 'Tras mover el origen a un punto fijo, la clasificación afín se reduce a la parte lineal.'
+          ? 'Los puntos fijos forman una recta. Al mover el origen a uno de ellos, el problema afín se reduce a la parte lineal.'
+          : 'Al mover el origen al punto fijo, el problema afín se reduce a la parte lineal.'
 
     const canvasSubtitle =
       fixedSet.kind === 'plane'
@@ -535,15 +535,15 @@ export function canonicalizeAffineMap(
       shortText,
       canvasSubtitle,
       steps: [
-        'Se construye la parte lineal A a partir de los vectores definidos por los puntos origen y por sus imágenes.',
-        'Se calcula la traslación t imponiendo F(p0) = q0.',
+        'Primero se reconstruye la parte lineal A a partir de los vectores del triángulo origen y del triángulo imagen.',
+        'Después se calcula la traslación t imponiendo que F(p0) sea q0.',
         fixedSet.kind === 'line'
-          ? 'El sistema (A - I)c = -t es compatible indeterminado, así que los puntos fijos forman una recta afín.'
+          ? 'La ecuación de los puntos fijos es compatible indeterminada, así que los puntos fijos forman una recta afín.'
           : fixedSet.kind === 'plane'
-            ? 'El sistema (A - I)c = -t queda trivialmente satisfecho para todo c, así que todo R² está formado por puntos fijos.'
-            : 'El sistema (A - I)c = -t tiene una única solución, luego existe un único punto fijo.',
+            ? 'La ecuación de los puntos fijos se satisface para cualquier c, así que todo el plano está formado por puntos fijos.'
+            : 'La ecuación de los puntos fijos tiene una única solución, así que aparece un único punto fijo.',
         'Al trasladar el origen a un punto fijo, la traslación desaparece.',
-        `La forma normal afín queda reducida a ${linearAnalysis.caseLabel.toLowerCase()}.`,
+        `A partir de ahí, la forma normal afín queda descrita por ${linearAnalysis.caseLabel.toLowerCase()}.`,
       ],
     }
   }
@@ -560,13 +560,13 @@ export function canonicalizeAffineMap(
       fixedSet,
       canonicalFixedSet: classifyAffineFixedSet(identityMatrix(), canonicalTranslation),
       caseLabel: 'Traslación no trivial',
-      shortText: 'Sin punto fijo y con parte lineal identidad, la aplicación es afínmente equivalente a una traslación unitaria.',
+      shortText: 'No hay punto fijo y la parte lineal es la identidad, así que todo se reduce a una traslación unitaria.',
       canvasSubtitle: 'La forma canónica elegida es una traslación horizontal unitaria.',
       steps: [
-        'La parte lineal coincide con la identidad.',
-        'No existe punto fijo, así que la traslación es esencial.',
-        'Mediante un cambio lineal de coordenadas se puede alinear con el eje x.',
-        'Tras reescalar se normaliza a una unidad.',
+        'La parte lineal coincide con la identidad, así que no aporta ninguna deformación adicional.',
+        'Como no existe punto fijo, la traslación no se puede eliminar.',
+        'Con un cambio lineal de coordenadas se alinea esa traslación con el eje x.',
+        'Después se reescala para que quede normalizada a una unidad.',
       ],
     }
   }
@@ -597,13 +597,13 @@ export function canonicalizeAffineMap(
       fixedSet,
       canonicalFixedSet: classifyAffineFixedSet(canonicalLinearPart, canonicalTranslation),
       caseLabel: 'Sin punto fijo y con un autovalor igual a 1',
-      shortText: 'La traslación esencial sobrevive en la dirección propia del autovalor 1 y se normaliza.',
+      shortText: 'La parte esencial de la traslación sobrevive en la dirección propia del autovalor 1 y después se normaliza.',
       canvasSubtitle: 'Se muestra la forma canónica afín con una traslación normalizada en la dirección propia.',
       steps: [
         'La parte lineal tiene dos autovalores reales distintos y uno de ellos es 1.',
-        'La ausencia de punto fijo impide absorber completamente la traslación.',
-        'En una base propia, sólo queda una componente esencial en la dirección del autovalor 1.',
-        `Esa componente se normaliza y se obtiene (x, y) ↦ (x + 1, ${formatMatrixEntry(otherEigenvalue)} y).`,
+        'Como no hay punto fijo, la traslación no se puede absorber por completo.',
+        'Al pasar a una base propia, sólo queda una componente esencial en la dirección del autovalor 1.',
+        `Después se normaliza esa componente y se obtiene la forma (x, y) ↦ (x + 1, ${formatMatrixEntry(otherEigenvalue)} y).`,
       ],
     }
   }
@@ -625,13 +625,13 @@ export function canonicalizeAffineMap(
       fixedSet,
       canonicalFixedSet: classifyAffineFixedSet(canonicalLinearPart, canonicalTranslation),
       caseLabel: 'Caso parabólico sin punto fijo',
-      shortText: 'Aparece un bloque de Jordan para el autovalor 1 y una traslación residual transversal.',
+      shortText: 'Aparece un bloque de Jordan para el autovalor 1 y una traslación transversal que no se puede eliminar.',
       canvasSubtitle: 'La forma normal afín se representa como (x, y) ↦ (x + y, y + 1).',
       steps: [
-        'La parte lineal tiene autovalor 1 con bloque de Jordan no trivial.',
-        'No hay punto fijo, así que queda una componente afín esencial.',
+        'La parte lineal tiene el autovalor 1, pero aparece con un bloque de Jordan no trivial.',
+        'Como no hay punto fijo, sobrevive una componente afín esencial.',
         'En una base de Jordan, la traslación residual sólo importa en la dirección transversal.',
-        'Tras normalizarla se obtiene la forma parabólica estándar.',
+        'Después se normaliza esa componente y aparece la forma parabólica estándar.',
       ],
     }
   }
@@ -647,12 +647,12 @@ export function canonicalizeAffineMap(
     fixedSet,
     canonicalFixedSet: classifyAffineFixedSet(linearAnalysis.canonicalMatrix, canonicalTranslation),
     caseLabel: 'Forma normal afín reducida a la parte lineal',
-    shortText: 'La traslación no introduce un nuevo fenómeno afín tras el cambio de coordenadas adecuado.',
+    shortText: 'Tras el cambio de coordenadas adecuado, la traslación ya no introduce un fenómeno afín nuevo.',
     canvasSubtitle: 'Se muestra la forma canónica real de la parte lineal.',
     steps: [
-      'Se construye la matriz homogénea de la aplicación afín.',
-      'La reducción afín no deja una traslación esencial en la forma normal.',
-      'La clasificación coincide con la forma canónica real de la parte lineal.',
+      'Primero se escribe la matriz homogénea de la aplicación afín.',
+      'Después se comprueba que la reducción no deja una traslación esencial en la forma normal.',
+      'Al final, la clasificación coincide con la forma canónica real de la parte lineal.',
     ],
   }
 }
