@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import katex from 'katex'
 import type { PrintableReportDocument, ReportBlock, ReportFact, ReportTexDownload } from '../lib/reportModels'
 
@@ -72,50 +72,10 @@ function buildDownloadUrl(download: ReportTexDownload) {
     : download.endpoint
 }
 
-function buildHealthUrl(download: ReportTexDownload) {
-  return download.apiBaseUrl
-    ? new URL('/api/health', download.apiBaseUrl).toString()
-    : '/api/health'
-}
-
 export function PrintableReportPage({ document }: { document: PrintableReportDocument }) {
   const appUrl = import.meta.env.BASE_URL
-  const [texBackendState, setTexBackendState] = useState<'unknown' | 'available' | 'unavailable'>('unknown')
   const [texDownloadStatus, setTexDownloadStatus] = useState<'idle' | 'loading' | 'error'>('idle')
   const [texDownloadMessage, setTexDownloadMessage] = useState('')
-
-  useEffect(() => {
-    if (!document.texDownload) {
-      setTexBackendState('unknown')
-      return
-    }
-
-    const controller = new AbortController()
-    setTexBackendState('unknown')
-
-    const checkTexBackend = async () => {
-      try {
-        const response = await fetch(buildHealthUrl(document.texDownload as ReportTexDownload), {
-          cache: 'no-store',
-          signal: controller.signal,
-        })
-
-        if (!controller.signal.aborted) {
-          setTexBackendState(response.ok ? 'available' : 'unavailable')
-        }
-      } catch {
-        if (!controller.signal.aborted) {
-          setTexBackendState('unavailable')
-        }
-      }
-    }
-
-    void checkTexBackend()
-
-    return () => {
-      controller.abort()
-    }
-  }, [document.texDownload])
 
   const downloadTex = async () => {
     if (!document.texDownload) {
@@ -133,8 +93,11 @@ export function PrintableReportPage({ document }: { document: PrintableReportDoc
       })
 
       if (!response.ok) {
-        const errorPayload = await response.json().catch(() => ({ error: 'No se pudo preparar el archivo .tex.' }))
-        throw new Error(errorPayload.error ?? 'No se pudo preparar el archivo .tex.')
+        const errorPayload = await response.json().catch(() => ({ error: '' }))
+        const fallbackMessage = document.texDownload.apiBaseUrl
+          ? 'No se pudo descargar el archivo .tex desde la API configurada.'
+          : 'No se pudo descargar el archivo .tex. Para esta opción necesitas el servidor local activo o una API configurada.'
+        throw new Error(errorPayload.error || fallbackMessage)
       }
 
       const blob = await response.blob()
@@ -147,14 +110,13 @@ export function PrintableReportPage({ document }: { document: PrintableReportDoc
       setTexDownloadStatus('idle')
     } catch (error) {
       setTexDownloadStatus('error')
-      setTexDownloadMessage(error instanceof Error ? error.message : 'No se pudo descargar el archivo .tex.')
+      setTexDownloadMessage(
+        error instanceof Error
+          ? error.message
+          : 'No se pudo descargar el archivo .tex. Para esta opción necesitas el servidor local activo o una API configurada.',
+      )
     }
   }
-
-  const texBackendHint =
-    document.texDownload && texBackendState === 'unavailable'
-      ? 'La descarga .tex necesita el servidor local o una API configurada. El botón sigue visible para que puedas volver a intentarlo en cuanto ese servicio esté disponible.'
-      : ''
 
   return (
     <main className="report-shell">
@@ -180,7 +142,6 @@ export function PrintableReportPage({ document }: { document: PrintableReportDoc
           </button>
         </div>
 
-        {texBackendHint ? <p className="report-action-message is-hint">{texBackendHint}</p> : null}
         {texDownloadMessage ? <p className="report-action-message">{texDownloadMessage}</p> : null}
 
         <FactsGrid items={document.highlights} />

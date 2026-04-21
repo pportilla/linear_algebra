@@ -1032,7 +1032,7 @@ function buildAffineTex(payload) {
 \\begin{document}
 \\section*{Reducción afín en $\\mathbb R^2$: ${caseTitle}}
 
-\subsection*{Paso 1. Datos de partida}
+\\subsection*{Paso 1. Datos de partida}
 Se toman tres puntos afínmente independientes
 \\[
 p_0=${vecToLatex(payload.source.p0)},\\qquad

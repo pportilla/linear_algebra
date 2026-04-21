@@ -164,10 +164,6 @@ p {
   font-size: 0.95rem;
 }
 
-.report-action-message.is-hint {
-  color: var(--report-muted);
-}
-
 .report-layout {
   display: grid;
   grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
