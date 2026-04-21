@@ -1,5 +1,5 @@
 const EPSILON = 1e-8
-const MAX_FRACTION_DENOMINATOR = 4096
+const MAX_FRACTION_DENOMINATOR = 1_000_000
 const FRACTION_TOLERANCE = 1e-10
 
 export interface Fraction {
@@ -64,41 +64,64 @@ function isZeroFraction(value: Fraction) {
 }
 
 export function approximateFraction(value: number): Fraction | null {
+  if (!Number.isFinite(value)) {
+    return null
+  }
+
   const clean = Math.abs(value) < EPSILON ? 0 : value
 
-  if (!Number.isFinite(clean)) {
-    return null
+  if (clean === 0) {
+    return { numerator: 0, denominator: 1 }
   }
 
-  let bestNumerator = Math.round(clean)
-  let bestDenominator = 1
-  let bestError = Math.abs(clean - bestNumerator)
+  const sign = clean < 0 ? -1 : 1
+  const absolute = Math.abs(clean)
+  const rounded = Math.round(absolute)
 
-  if (bestError < FRACTION_TOLERANCE) {
-    return normalizeFraction(bestNumerator, 1)
+  if (Math.abs(absolute - rounded) < FRACTION_TOLERANCE) {
+    return normalizeFraction(sign * rounded, 1)
   }
 
-  for (let denominator = 1; denominator <= MAX_FRACTION_DENOMINATOR; denominator += 1) {
-    const numerator = Math.round(clean * denominator)
-    const approximation = numerator / denominator
-    const error = Math.abs(clean - approximation)
+  let x = absolute
+  let h0 = 0
+  let h1 = 1
+  let k0 = 1
+  let k1 = 0
 
-    if (error < bestError) {
-      bestNumerator = numerator
-      bestDenominator = denominator
-      bestError = error
+  for (let iteration = 0; iteration < 64; iteration += 1) {
+    const a = Math.floor(x)
+    const h2 = a * h1 + h0
+    const k2 = a * k1 + k0
+
+    if (k2 > MAX_FRACTION_DENOMINATOR) {
+      if (k1 > 0) {
+        const approximation = h1 / k1
+        if (Math.abs(absolute - approximation) < FRACTION_TOLERANCE) {
+          return normalizeFraction(sign * h1, k1)
+        }
+      }
+      return null
     }
 
-    if (error < FRACTION_TOLERANCE) {
+    h0 = h1
+    h1 = h2
+    k0 = k1
+    k1 = k2
+
+    const approximation = h1 / k1
+    if (Math.abs(absolute - approximation) < FRACTION_TOLERANCE) {
+      return normalizeFraction(sign * h1, k1)
+    }
+
+    const fractional = x - a
+    if (fractional < 1e-15) {
       break
     }
+
+    x = 1 / fractional
   }
 
-  if (bestError > FRACTION_TOLERANCE) {
-    return null
-  }
-
-  return normalizeFraction(bestNumerator, bestDenominator)
+  return null
 }
 
 function formatFractionText(value: Fraction) {
