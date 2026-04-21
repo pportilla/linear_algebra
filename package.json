@@ -1,5 +1,5 @@
 {
-  "name": "linear-algebra",
+  "name": "app_r2_canonica",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -9,11 +9,12 @@
     "dev:server": "node server.mjs",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview",
-    "start": "node server.mjs"
+    "preview": "npm run build && node server.mjs",
+    "start": "npm run build && node server.mjs"
   },
   "dependencies": {
     "express": "^5.1.0",
+    "katex": "^0.16.45",
     "react": "^19.2.5",
     "react-dom": "^19.2.5"
   },

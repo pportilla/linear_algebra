@@ -1175,7 +1175,7 @@ app.post('/api/affine-pdf', async (request, response) => {
 
 if (existsSync(distPath)) {
   app.use(express.static(distPath))
-  app.get(/^(?!\/api).*/, (_request, response) => {
+  app.get(/^(?!\/api)(?!.*\.[a-zA-Z0-9]+$).*/, (_request, response) => {
     response.sendFile(path.join(distPath, 'index.html'))
   })
 }

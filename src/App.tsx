@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import './App.css'
 import { CartesianPlane } from './components/CartesianPlane'
 import {
@@ -99,7 +99,8 @@ function CoordinateCard({
 
 function App() {
   const pdfApiBaseUrl = (import.meta.env.VITE_PDF_API_BASE_URL ?? '').trim()
-  const hasServerPdfExport = import.meta.env.DEV || pdfApiBaseUrl.length > 0
+  const localHostname = typeof window !== 'undefined' && ['localhost', '127.0.0.1'].includes(window.location.hostname)
+  const [hasServerPdfExport, setHasServerPdfExport] = useState(() => pdfApiBaseUrl.length > 0 || localHostname)
 
   const [activeTab, setActiveTab] = useState<TabId>('lineal')
   const [linearPoints, setLinearPoints] = useState<Record<LinearPointId, Vec2>>(initialLinearPoints)
@@ -120,6 +121,38 @@ function App() {
   const affineSide1 = subtractVectors(affineSource.p1, affineSource.p0)
   const affineSide2 = subtractVectors(affineSource.p2, affineSource.p0)
   const affineAnalysis = affineDraftValid ? canonicalizeAffineMap(affineSource, affineImages) : null
+
+  useEffect(() => {
+    if (pdfApiBaseUrl.length > 0) {
+      setHasServerPdfExport(true)
+      return
+    }
+
+    const controller = new AbortController()
+
+    const checkPdfServer = async () => {
+      try {
+        const response = await fetch('/api/health', {
+          cache: 'no-store',
+          signal: controller.signal,
+        })
+
+        if (!controller.signal.aborted) {
+          setHasServerPdfExport(response.ok)
+        }
+      } catch {
+        if (!controller.signal.aborted) {
+          setHasServerPdfExport(false)
+        }
+      }
+    }
+
+    void checkPdfServer()
+
+    return () => {
+      controller.abort()
+    }
+  }, [pdfApiBaseUrl])
 
   const getPdfEndpoint = (path: string) => {
     if (!pdfApiBaseUrl) {
@@ -341,7 +374,7 @@ function App() {
                   ? 'Generando PDF...'
                   : hasServerPdfExport
                     ? 'Generar PDF detallado'
-                    : 'Abrir informe imprimible'}
+                    : 'Abrir informe detallado'}
               </button>
             </div>
           </div>
@@ -434,7 +467,7 @@ function App() {
                   ? 'Generando PDF...'
                   : hasServerPdfExport
                     ? 'Generar PDF detallado'
-                    : 'Abrir informe imprimible'}
+                    : 'Abrir informe detallado'}
               </button>
             </div>
           </div>
@@ -541,8 +574,8 @@ function App() {
       <footer className="footer-note">
         <p>
           {hasServerPdfExport
-            ? 'PDFs deterministas generados en servidor.'
-            : 'Sitio estatico compatible con GitHub Pages. En produccion, los informes se abren en una vista imprimible del navegador.'}
+            ? 'PDFs deterministas generados en servidor o mediante un backend PDF configurado.'
+            : 'Sitio estatico compatible con GitHub Pages. Si no hay backend PDF disponible, los informes se abren en una pagina matematica separada lista para imprimir.'}
         </p>
       </footer>
     </main>
