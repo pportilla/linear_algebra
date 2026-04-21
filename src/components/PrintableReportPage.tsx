@@ -112,7 +112,7 @@ export function PrintableReportPage({ document }: { document: PrintableReportDoc
         <div className="report-hero-copy">
           <p className="report-badge">{document.statusLabel}</p>
           <h1>{document.title}</h1>
-          <p className="report-subtitle">{document.subtitle}</p>
+          {document.subtitle ? <p className="report-subtitle">{document.subtitle}</p> : null}
           <p className="report-generated">Generado el {document.generatedAt}</p>
         </div>
 

@@ -309,9 +309,9 @@ function App() {
 
   const canonicalAffineImages = affineAnalysis
     ? [
-        { id: 'cp0', label: 'F(0, 0)', point: applyAffine(affineAnalysis.canonicalLinearPart, affineAnalysis.canonicalTranslation, { x: 0, y: 0 }), color: '#dd8b18' },
-        { id: 'cp1', label: 'F(1, 0)', point: applyAffine(affineAnalysis.canonicalLinearPart, affineAnalysis.canonicalTranslation, { x: 1, y: 0 }), color: '#309f69' },
-        { id: 'cp2', label: 'F(0, 1)', point: applyAffine(affineAnalysis.canonicalLinearPart, affineAnalysis.canonicalTranslation, { x: 0, y: 1 }), color: '#5b48a3' },
+        { id: 'cp0', label: 'F(O)', point: applyAffine(affineAnalysis.canonicalLinearPart, affineAnalysis.canonicalTranslation, { x: 0, y: 0 }), color: '#dd8b18' },
+        { id: 'cp1', label: 'F(e1)', point: applyAffine(affineAnalysis.canonicalLinearPart, affineAnalysis.canonicalTranslation, { x: 1, y: 0 }), color: '#309f69' },
+        { id: 'cp2', label: 'F(e2)', point: applyAffine(affineAnalysis.canonicalLinearPart, affineAnalysis.canonicalTranslation, { x: 0, y: 1 }), color: '#5b48a3' },
       ]
     : []
 
@@ -392,7 +392,7 @@ function App() {
                 <CoordinateCard label="T(b2)" point={linearPoints.tb2} isActive={activeLinearPoint === 'tb2'} onFocus={() => setActiveLinearPoint('tb2')} onChange={(point) => updateLinearPoint('tb2', point)} />
               </div>
               <div className={`summary-card ${linearData ? '' : 'warning-card'}`}>
-                <span className="eyebrow">Estado algebraico</span>
+                <span className="eyebrow">Validez de la base</span>
                 <p>Determinante de la base: <strong>{formatMatrixEntry(linearData?.basisDeterminant ?? 0)}</strong></p>
                 <p>
                   {linearData ? 'La base es válida y determina una única aplicación lineal.' : 'Los vectores b1 y b2 son dependientes. Ajusta la base para poder reconstruir la aplicación.'}
@@ -523,13 +523,13 @@ function App() {
                   ]}
                 />
                 <CartesianPlane
-                  title="Representante canónico en vivo"
-                  subtitle={affineAnalysis ? 'Forma normal afín.' : 'Datos degenerados.'}
+                  title="Forma normal en la referencia estándar"
+                  subtitle={affineAnalysis ? 'Puntos O, e1 y e2 junto a sus imágenes por la forma normal.' : 'Datos degenerados.'}
                   range={5}
                   items={[
-                    { id: 's0', label: '(0, 0)', point: { x: 0, y: 0 }, color: '#b55233', kind: 'point' },
-                    { id: 's1', label: '(1, 0)', point: { x: 1, y: 0 }, color: '#127b75', kind: 'point' },
-                    { id: 's2', label: '(0, 1)', point: { x: 0, y: 1 }, color: '#2457a6', kind: 'point' },
+                    { id: 's0', label: 'O', point: { x: 0, y: 0 }, color: '#b55233', kind: 'point' },
+                    { id: 's1', label: 'e1', point: { x: 1, y: 0 }, color: '#127b75', kind: 'point' },
+                    { id: 's2', label: 'e2', point: { x: 0, y: 1 }, color: '#2457a6', kind: 'point' },
                     ...canonicalAffineImages.map((item) => ({ ...item, kind: 'point' as const })),
                     ...canonicalFixedSetItems,
                   ]}
@@ -572,11 +572,7 @@ function App() {
       )}
 
       <footer className="footer-note">
-        <p>
-          {hasServerPdfExport
-            ? 'PDFs deterministas generados en servidor o mediante un backend PDF configurado.'
-            : 'Sitio estatico compatible con GitHub Pages. Si no hay backend PDF disponible, los informes se abren en una pagina matematica separada lista para imprimir.'}
-        </p>
+        <p>GNU license by Pablo Portilla.</p>
       </footer>
     </main>
   )

@@ -416,7 +416,7 @@ export function buildLinearReportDocument(input: LinearReportInput): PrintableRe
   return {
     kind: 'linear',
     title: 'Informe detallado de la reducción lineal en R²',
-    subtitle: 'Recorrido completo del ejemplo, desde los datos de partida hasta la forma canónica final.',
+    subtitle: '',
     statusLabel: caseLabel,
     generatedAt: createGeneratedAtLabel(),
     highlights: [
@@ -630,7 +630,7 @@ export function buildAffineReportDocument(input: AffineReportInput): PrintableRe
   return {
     kind: 'affine',
     title: 'Informe detallado de la clasificación afín en R²',
-    subtitle: 'Recorrido completo del ejemplo afín, desde los puntos dados hasta la forma normal resultante.',
+    subtitle: '',
     statusLabel: analysis.caseLabel,
     generatedAt: createGeneratedAtLabel(),
     highlights: [
