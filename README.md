@@ -21,3 +21,4 @@ El repositorio incluye un flujo en GitHub Actions que construye `dist/` y public
 En GitHub Pages no existe backend Node, asi que la exportacion usa una vista imprimible del navegador. Desde ahi se puede guardar el informe como PDF.
 
 Si quieres usar un backend externo para conservar la generacion de PDFs en produccion, define la variable `VITE_PDF_API_BASE_URL` durante el build apuntando al origen del API.
+# linear_algebra
