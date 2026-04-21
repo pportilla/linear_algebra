@@ -330,6 +330,10 @@
 .plane-stage {
   position: relative;
   overscroll-behavior: contain;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .plane-toolbar {
@@ -339,6 +343,8 @@
   z-index: 2;
   display: grid;
   gap: 0.45rem;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .plane-header h3 {
@@ -358,6 +364,10 @@
   touch-action: none;
   overscroll-behavior: contain;
   cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
   background:
     radial-gradient(circle at 15% 15%, rgba(18, 123, 117, 0.08), transparent 35%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(244, 239, 231, 0.88));
@@ -365,6 +375,12 @@
 
 .plane-svg:active {
   cursor: grabbing;
+}
+
+.plane-svg text {
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .plane-button {
