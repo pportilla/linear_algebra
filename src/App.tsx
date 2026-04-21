@@ -310,7 +310,7 @@ function App() {
     <main className="app-shell">
       <header className="hero-panel">
         <div>
-          <h1>Linear Algebra Suite</h1>
+          <h1>Linear Algebra</h1>
         </div>
       </header>
 
