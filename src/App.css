@@ -184,6 +184,7 @@
 
 .coordinate-card {
   padding: 0.7rem 0.85rem;
+  cursor: pointer;
 }
 
 .coordinate-card.is-active {
@@ -242,6 +243,7 @@
   background: rgba(255, 255, 255, 0.8);
   color: var(--ink);
   font: inherit;
+  cursor: text;
 }
 
 .results-grid {

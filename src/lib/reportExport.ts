@@ -1,4 +1,5 @@
 import { buildAffineReportDocument, buildLinearReportDocument } from './reportContent'
+import { buildAffineTex, buildLinearTex } from './reportTex'
 import type {
   AffineReportInput,
   LinearReportInput,
@@ -7,11 +8,10 @@ import type {
   StoredReportRecord,
 } from './reportModels'
 
-const REPORT_STORAGE_PREFIX = 'linear-algebra:report:v2:'
+const REPORT_STORAGE_PREFIX = 'linear-algebra:report:v3:'
 const REPORT_QUERY_PARAM = 'report'
 const MAX_STORED_REPORTS = 12
 const REPORT_RETENTION_MS = 1000 * 60 * 60 * 24 * 3
-const pdfApiBaseUrl = (import.meta.env.VITE_PDF_API_BASE_URL ?? '').trim()
 
 function getStorage() {
   try {
@@ -131,14 +131,11 @@ export function openLinearPrintableReport(input: LinearReportInput) {
   const texDownload =
     input.linearData && input.linearAnalysis
       ? {
-          endpoint: '/api/linear-tex',
           filename: 'forma-jordan-r2-detallada.tex',
-          payload: {
+          content: buildLinearTex({
             basis: { b1: input.linearPoints.b1, b2: input.linearPoints.b2 },
             imageBasis: { tb1: input.linearPoints.tb1, tb2: input.linearPoints.tb2 },
-            matrix: input.linearData.matrix,
-          },
-          apiBaseUrl: pdfApiBaseUrl || undefined,
+          }),
         }
       : undefined
 
@@ -150,13 +147,11 @@ export function openAffinePrintableReport(input: AffineReportInput) {
   const texDownload =
     input.affineDraftValid && input.affineAnalysis
       ? {
-          endpoint: '/api/affine-tex',
           filename: 'forma-normal-afin-detallada.tex',
-          payload: {
+          content: buildAffineTex({
             source: input.affineSource,
             image: input.affineImages,
-          },
-          apiBaseUrl: pdfApiBaseUrl || undefined,
+          }),
         }
       : undefined
 

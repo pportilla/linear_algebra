@@ -68,8 +68,6 @@ export interface StoredReportRecord {
 }
 
 export interface ReportTexDownload {
-  endpoint: string
   filename: string
-  payload: unknown
-  apiBaseUrl?: string
+  content: string
 }

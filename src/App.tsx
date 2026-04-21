@@ -67,7 +67,7 @@ function CoordinateCard({
   onChange: (next: Vec2) => void
 }) {
   return (
-    <div className={`coordinate-card ${isActive ? 'is-active' : ''}`}>
+    <div className={`coordinate-card ${isActive ? 'is-active' : ''}`} onClick={onFocus}>
       <div className="coordinate-fields">
         <button type="button" className="coordinate-name" onClick={onFocus}>
           {label}

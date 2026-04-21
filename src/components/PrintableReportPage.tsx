@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import katex from 'katex'
-import type { PrintableReportDocument, ReportBlock, ReportFact, ReportTexDownload } from '../lib/reportModels'
+import type { PrintableReportDocument, ReportBlock, ReportFact } from '../lib/reportModels'
 
 function renderMath(tex: string, displayMode = false) {
   return {
@@ -74,12 +74,6 @@ function ReportBlockView({ block }: { block: ReportBlock }) {
   return <div className={`report-note ${block.tone === 'warning' ? 'is-warning' : ''}`}>{block.text}</div>
 }
 
-function buildDownloadUrl(download: ReportTexDownload) {
-  return download.apiBaseUrl
-    ? new URL(download.endpoint, download.apiBaseUrl).toString()
-    : download.endpoint
-}
-
 export function PrintableReportPage({ document }: { document: PrintableReportDocument }) {
   const appUrl = import.meta.env.BASE_URL
   const [texDownloadStatus, setTexDownloadStatus] = useState<'idle' | 'loading' | 'error'>('idle')
@@ -94,21 +88,7 @@ export function PrintableReportPage({ document }: { document: PrintableReportDoc
     setTexDownloadMessage('')
 
     try {
-      const response = await fetch(buildDownloadUrl(document.texDownload), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(document.texDownload.payload),
-      })
-
-      if (!response.ok) {
-        const errorPayload = await response.json().catch(() => ({ error: '' }))
-        const fallbackMessage = document.texDownload.apiBaseUrl
-          ? 'No se pudo descargar el archivo .tex desde la API configurada.'
-          : 'No se pudo descargar el archivo .tex. Para esta opción necesitas el servidor local activo o una API configurada.'
-        throw new Error(errorPayload.error || fallbackMessage)
-      }
-
-      const blob = await response.blob()
+      const blob = new Blob([document.texDownload.content], { type: 'text/x-tex;charset=utf-8' })
       const url = URL.createObjectURL(blob)
       const link = window.document.createElement('a')
       link.href = url
@@ -121,7 +101,7 @@ export function PrintableReportPage({ document }: { document: PrintableReportDoc
       setTexDownloadMessage(
         error instanceof Error
           ? error.message
-          : 'No se pudo descargar el archivo .tex. Para esta opción necesitas el servidor local activo o una API configurada.',
+          : 'No se pudo descargar el archivo .tex.',
       )
     }
   }
