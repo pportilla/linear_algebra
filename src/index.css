@@ -1,0 +1,82 @@
+:root {
+  --page: #f7f1e8;
+  --panel: rgba(255, 249, 240, 0.92);
+  --border: rgba(52, 59, 67, 0.14);
+  --border-soft: rgba(52, 59, 67, 0.09);
+  --ink: #1d2936;
+  --muted: #5b6470;
+  --accent: #127b75;
+  --accent-alt: #b55233;
+  --mono: 'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace;
+  --sans: 'Avenir Next', 'Segoe UI', sans-serif;
+  --heading: 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', Georgia, serif;
+  --shadow-soft: 0 20px 50px rgba(53, 37, 16, 0.08);
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 17px;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  color: var(--muted);
+  font: 400 1rem/1.55 var(--sans);
+  background:
+    radial-gradient(circle at top left, rgba(18, 123, 117, 0.14), transparent 26%),
+    radial-gradient(circle at top right, rgba(181, 82, 51, 0.16), transparent 22%),
+    linear-gradient(180deg, #fbf7f0 0%, #f4ede2 100%);
+}
+
+button,
+input {
+  font: inherit;
+}
+
+#root {
+  min-height: 100vh;
+  width: min(1440px, 100%);
+  margin: 0 auto;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--heading);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+h1 {
+  font-size: clamp(2.35rem, 4vw, 4.5rem);
+  line-height: 0.98;
+  margin: 0.55rem 0 1rem;
+}
+
+h2 {
+  font-size: clamp(1.5rem, 2vw, 2.2rem);
+}
+
+h3 {
+  font-size: 1.25rem;
+}
+
+p {
+  margin: 0;
+}
+
+a {
+  color: inherit;
+}

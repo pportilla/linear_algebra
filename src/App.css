@@ -1,0 +1,459 @@
+.app-shell {
+  display: grid;
+  gap: 2rem;
+  padding: 2rem;
+}
+
+.hero-panel,
+.tabs-card,
+.module-card,
+.footer-note {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  background: var(--panel);
+  box-shadow: var(--shadow-soft);
+}
+
+.hero-panel {
+  display: block;
+  padding: 2rem 2.25rem;
+  background:
+    radial-gradient(circle at top right, rgba(210, 113, 48, 0.18), transparent 33%),
+    radial-gradient(circle at 10% 20%, rgba(18, 123, 117, 0.2), transparent 35%),
+    var(--panel);
+}
+
+.hero-copy {
+  max-width: 28rem;
+  margin: 0;
+  font-size: 0.98rem;
+}
+
+.summary-card,
+.steps-card,
+.matrix-block,
+.plane-card,
+.coordinate-card {
+  border: 1px solid var(--border-soft);
+  border-radius: 20px;
+  background: rgba(255, 252, 245, 0.88);
+}
+
+.module-card {
+  padding: 1.5rem;
+}
+
+.tabs-card {
+  padding: 0.5rem;
+}
+
+.tabs-row {
+  display: inline-flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.tab-button {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 0.8rem 1.25rem;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.tab-button.is-selected {
+  background: linear-gradient(135deg, rgba(18, 123, 117, 0.16), rgba(181, 82, 51, 0.16));
+  border-color: rgba(18, 123, 117, 0.3);
+}
+
+.module-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.module-layout {
+  display: grid;
+  grid-template-columns: minmax(240px, 290px) minmax(0, 1fr);
+  gap: 1.25rem;
+}
+
+.control-panel,
+.visual-panel,
+.plane-stack,
+.results-grid,
+.steps-card,
+.coordinate-fields {
+  display: grid;
+  gap: 1rem;
+}
+
+.plane-stack {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+}
+
+.control-panel {
+  align-content: start;
+}
+
+.actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.primary-button,
+.secondary-button,
+.ghost-button {
+  appearance: none;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font: inherit;
+  cursor: pointer;
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease,
+    background-color 160ms ease,
+    border-color 160ms ease;
+}
+
+.primary-button,
+.secondary-button {
+  padding: 0.85rem 1.15rem;
+  font-weight: 600;
+}
+
+.primary-button {
+  color: #fffaf0;
+  background: linear-gradient(135deg, #b55233, #da8b38);
+  box-shadow: 0 12px 24px rgba(181, 82, 51, 0.24);
+}
+
+.secondary-button {
+  color: var(--ink);
+  background: rgba(18, 123, 117, 0.12);
+  border-color: rgba(18, 123, 117, 0.22);
+}
+
+.ghost-button {
+  padding: 0.65rem 0.95rem;
+  color: var(--ink);
+  background: transparent;
+  border-color: var(--border);
+}
+
+.primary-button:hover,
+.secondary-button:hover,
+.ghost-button:hover {
+  transform: translateY(-1px);
+}
+
+.primary-button:disabled,
+.secondary-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.coordinate-card,
+.group-card,
+.summary-card,
+.steps-card,
+.plane-card,
+.matrix-block {
+  padding: 1rem;
+}
+
+.group-card {
+  display: grid;
+  gap: 1rem;
+  border: 1px solid var(--border-soft);
+  border-radius: 20px;
+  background: rgba(255, 252, 245, 0.88);
+}
+
+.coordinate-card {
+  padding: 0.7rem 0.85rem;
+}
+
+.coordinate-card.is-active {
+  border-color: rgba(18, 123, 117, 0.45);
+  box-shadow: inset 0 0 0 1px rgba(18, 123, 117, 0.18);
+}
+
+.summary-card strong,
+.steps-card h3,
+.module-card h2 {
+  color: var(--ink);
+}
+
+.summary-card p,
+.steps-card p,
+.plane-caption,
+.matrix-grid,
+.footer-note p {
+  margin: 0;
+}
+
+.coordinate-fields {
+  grid-template-columns: auto repeat(2, minmax(0, 1fr));
+  align-items: end;
+}
+
+.coordinate-input {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.coordinate-input span {
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+
+.coordinate-name {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+  padding: 0 0.2rem 0 0;
+  text-align: left;
+  cursor: pointer;
+  align-self: center;
+}
+
+.coordinate-input input {
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  padding: 0.6rem 0.75rem;
+  background: rgba(255, 255, 255, 0.8);
+  color: var(--ink);
+  font: inherit;
+}
+
+.results-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.linear-results-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.results-grid-affine {
+  margin-top: 0.25rem;
+}
+
+.eyebrow {
+  display: inline-block;
+  margin-bottom: 0.4rem;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.matrix-block {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.matrix-grid {
+  display: inline-grid;
+  gap: 0.35rem;
+  font-family: var(--mono);
+  color: var(--ink);
+}
+
+.matrix-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(4rem, 1fr));
+  gap: 0.5rem;
+}
+
+.matrix-row span {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 2.2rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(40, 53, 70, 0.08);
+}
+
+.steps-card ol {
+  margin: 0;
+  padding-left: 1.2rem;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.steps-card li {
+  padding-left: 0.2rem;
+}
+
+.warning-card {
+  border-color: rgba(181, 82, 51, 0.35);
+  background: rgba(255, 244, 235, 0.95);
+}
+
+.error-text {
+  color: #9f2d25;
+  font-weight: 600;
+}
+
+.plane-card {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.plane-header {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.plane-stage {
+  position: relative;
+  overscroll-behavior: contain;
+}
+
+.plane-toolbar {
+  position: absolute;
+  top: 0.85rem;
+  right: 0.85rem;
+  z-index: 2;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.plane-header h3 {
+  margin: 0;
+  color: var(--ink);
+}
+
+.plane-caption {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.plane-svg {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 20px;
+  touch-action: none;
+  overscroll-behavior: contain;
+  cursor: grab;
+  background:
+    radial-gradient(circle at 15% 15%, rgba(18, 123, 117, 0.08), transparent 35%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(244, 239, 231, 0.88));
+}
+
+.plane-svg:active {
+  cursor: grabbing;
+}
+
+.plane-button {
+  appearance: none;
+  width: 2.35rem;
+  height: 2.35rem;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid rgba(40, 53, 70, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 252, 245, 0.88);
+  color: var(--ink);
+  box-shadow: 0 10px 24px rgba(40, 53, 70, 0.12);
+  backdrop-filter: blur(6px);
+  cursor: pointer;
+}
+
+.plane-button:hover,
+.plane-button:focus-visible {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 28px rgba(40, 53, 70, 0.16);
+}
+
+.plane-button svg {
+  width: 1.05rem;
+  height: 1.05rem;
+}
+
+.plane-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.legend-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.4rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-soft);
+  background: rgba(255, 255, 255, 0.84);
+  color: var(--ink);
+  font-size: 0.9rem;
+}
+
+.legend-swatch {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 999px;
+}
+
+.footer-note {
+  padding: 0.85rem 1.15rem;
+}
+
+@media (max-width: 1080px) {
+  .module-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .plane-stack {
+    grid-template-columns: 1fr;
+  }
+
+  .module-head {
+    flex-direction: column;
+  }
+
+  .actions-row {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 720px) {
+  .app-shell {
+    padding: 1rem;
+  }
+
+  .hero-panel,
+  .module-card {
+    padding: 1.2rem;
+    border-radius: 22px;
+  }
+
+  .results-grid,
+  .coordinate-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .coordinate-name {
+    padding-bottom: 0.2rem;
+  }
+}
