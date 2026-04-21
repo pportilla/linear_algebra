@@ -415,7 +415,7 @@ export function buildLinearReportDocument(input: LinearReportInput): PrintableRe
   return {
     kind: 'linear',
     title: 'Informe detallado de la reducción lineal en R²',
-    subtitle: 'Versión HTML matemática para revisar la derivación y, si quieres, imprimirla o guardarla como PDF.',
+    subtitle: 'Recorrido completo del ejemplo con el cálculo de la matriz y su reducción canónica.',
     statusLabel: caseLabel,
     generatedAt: createGeneratedAtLabel(),
     highlights: [
@@ -446,7 +446,7 @@ export function buildLinearReportDocument(input: LinearReportInput): PrintableRe
       section('reconstruccion', 'Paso 4', 'Matriz de la aplicación en la base estándar', [
         paragraph('Multiplicando la igualdad AB=Y a la derecha por B^{-1} se despeja la matriz buscada.'),
         math(`A=YB^{-1}=${matrixTex(imageMatrix)}\\cdot${matrixTex(inverseBasis)}=${matrixTex(matrix)}`),
-      ], 'Aquí es donde se obtiene exactamente la matriz A que antes salía en el PDF LaTeX.'),
+      ], 'Aquí es donde se obtiene la matriz A a partir de los datos fijados.'),
       section('polinomio', 'Paso 5', 'Polinomio característico', [
         paragraph('A partir de la matriz reconstruida se calculan la traza y el determinante.'),
         facts([
@@ -625,7 +625,7 @@ export function buildAffineReportDocument(input: AffineReportInput): PrintableRe
   return {
     kind: 'affine',
     title: 'Informe detallado de la clasificación afín en R²',
-    subtitle: 'Página matemática separada para revisar la derivación completa antes de imprimir o guardar el resultado.',
+    subtitle: 'Recorrido completo del ejemplo afín con sus cálculos y la forma normal resultante.',
     statusLabel: analysis.caseLabel,
     generatedAt: createGeneratedAtLabel(),
     highlights: [
@@ -667,7 +667,7 @@ export function buildAffineReportDocument(input: AffineReportInput): PrintableRe
       ]),
       section('clasificacion', 'Paso 4', 'Geometría afín: puntos fijos y caso normal', buildAffineClassificationBlocks(linearPart, translation, input), linearClassification.shortText),
       section('normal', 'Paso 5', 'Representante canónico en la nueva referencia', [
-        paragraph('La forma normal afín queda recogida por la matriz homogénea canónica. Esta es la versión HTML del bloque que antes sólo aparecía bien en el PDF LaTeX.'),
+        paragraph('La forma normal afín queda recogida por la matriz homogénea canónica en la referencia elegida.'),
         facts([
           mathFact('A_{\\mathrm{can}}', matrixTex(analysis.canonicalLinearPart), true),
           mathFact('t_{\\mathrm{can}}', vectorTex(analysis.canonicalTranslation)),

@@ -141,6 +141,12 @@ p {
   text-decoration: none;
 }
 
+.report-link:disabled,
+.report-print-button:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
 .report-link {
   color: var(--report-ink);
   border-color: var(--report-border);
@@ -150,6 +156,10 @@ p {
 .report-print-button {
   color: #fffaf4;
   background: linear-gradient(135deg, var(--report-accent), var(--report-accent-alt));
+}
+
+.report-action-message {
+  color: #8d2a20;
 }
 
 .report-layout {

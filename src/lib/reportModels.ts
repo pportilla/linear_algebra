@@ -58,9 +58,17 @@ export interface PrintableReportDocument {
   highlights: ReportFact[]
   sections: ReportSection[]
   closingFacts?: ReportFact[]
+  texDownload?: ReportTexDownload
 }
 
 export interface StoredReportRecord {
   savedAt: number
   document: PrintableReportDocument
+}
+
+export interface ReportTexDownload {
+  endpoint: string
+  filename: string
+  payload: unknown
+  apiBaseUrl?: string
 }

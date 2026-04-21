@@ -1122,6 +1122,25 @@ app.get('/api/health', (_request, response) => {
   response.json({ ok: true })
 })
 
+app.post('/api/linear-tex', async (request, response) => {
+  const payload = request.body
+  if (!payload?.basis?.b1 || !payload?.basis?.b2 || !payload?.imageBasis?.tb1 || !payload?.imageBasis?.tb2) {
+    response.status(400).json({ error: 'Los datos lineales enviados no son válidos.' })
+    return
+  }
+
+  try {
+    const tex = buildLinearTex(payload)
+    response.setHeader('Content-Type', 'text/x-tex; charset=utf-8')
+    response.setHeader('Content-Disposition', 'attachment; filename="forma-jordan-r2-detallada.tex"')
+    response.send(tex)
+  } catch (error) {
+    response.status(500).json({
+      error: error instanceof Error ? error.message : 'No se pudo generar el archivo .tex.',
+    })
+  }
+})
+
 app.post('/api/linear-pdf', async (request, response) => {
   const payload = request.body
   if (!payload?.basis?.b1 || !payload?.basis?.b2 || !payload?.imageBasis?.tb1 || !payload?.imageBasis?.tb2) {
@@ -1145,6 +1164,25 @@ app.post('/api/linear-pdf', async (request, response) => {
     if (workdir) {
       await rm(workdir, { recursive: true, force: true })
     }
+  }
+})
+
+app.post('/api/affine-tex', async (request, response) => {
+  const payload = request.body
+  if (!payload?.source?.p0 || !payload?.source?.p1 || !payload?.source?.p2 || !payload?.image?.q0 || !payload?.image?.q1 || !payload?.image?.q2) {
+    response.status(400).json({ error: 'Los datos afines enviados no son válidos.' })
+    return
+  }
+
+  try {
+    const tex = buildAffineTex(payload)
+    response.setHeader('Content-Type', 'text/x-tex; charset=utf-8')
+    response.setHeader('Content-Disposition', 'attachment; filename="forma-normal-afin-detallada.tex"')
+    response.send(tex)
+  } catch (error) {
+    response.status(500).json({
+      error: error instanceof Error ? error.message : 'No se pudo generar el archivo .tex.',
+    })
   }
 })
 

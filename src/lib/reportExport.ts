@@ -3,6 +3,7 @@ import type {
   AffineReportInput,
   LinearReportInput,
   PrintableReportDocument,
+  ReportTexDownload,
   StoredReportRecord,
 } from './reportModels'
 
@@ -10,6 +11,7 @@ const REPORT_STORAGE_PREFIX = 'linear-algebra:report:'
 const REPORT_QUERY_PARAM = 'report'
 const MAX_STORED_REPORTS = 12
 const REPORT_RETENTION_MS = 1000 * 60 * 60 * 24 * 3
+const pdfApiBaseUrl = (import.meta.env.VITE_PDF_API_BASE_URL ?? '').trim()
 
 function getStorage() {
   try {
@@ -116,12 +118,49 @@ function openReportPage(document: PrintableReportDocument) {
   }
 }
 
+function withTexDownload(document: PrintableReportDocument, texDownload?: ReportTexDownload) {
+  if (!texDownload) {
+    return document
+  }
+
+  return { ...document, texDownload }
+}
+
 export function openLinearPrintableReport(input: LinearReportInput) {
-  openReportPage(buildLinearReportDocument(input))
+  const document = buildLinearReportDocument(input)
+  const texDownload =
+    input.linearData && input.linearAnalysis
+      ? {
+          endpoint: '/api/linear-tex',
+          filename: 'forma-jordan-r2-detallada.tex',
+          payload: {
+            basis: { b1: input.linearPoints.b1, b2: input.linearPoints.b2 },
+            imageBasis: { tb1: input.linearPoints.tb1, tb2: input.linearPoints.tb2 },
+            matrix: input.linearData.matrix,
+          },
+          apiBaseUrl: pdfApiBaseUrl || undefined,
+        }
+      : undefined
+
+  openReportPage(withTexDownload(document, texDownload))
 }
 
 export function openAffinePrintableReport(input: AffineReportInput) {
-  openReportPage(buildAffineReportDocument(input))
+  const document = buildAffineReportDocument(input)
+  const texDownload =
+    input.affineDraftValid && input.affineAnalysis
+      ? {
+          endpoint: '/api/affine-tex',
+          filename: 'forma-normal-afin-detallada.tex',
+          payload: {
+            source: input.affineSource,
+            image: input.affineImages,
+          },
+          apiBaseUrl: pdfApiBaseUrl || undefined,
+        }
+      : undefined
+
+  openReportPage(withTexDownload(document, texDownload))
 }
 
 export function loadStoredReportDocument(reportId: string) {

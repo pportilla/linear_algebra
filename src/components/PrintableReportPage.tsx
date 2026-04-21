@@ -1,5 +1,6 @@
+import { useEffect, useState } from 'react'
 import katex from 'katex'
-import type { PrintableReportDocument, ReportBlock, ReportFact } from '../lib/reportModels'
+import type { PrintableReportDocument, ReportBlock, ReportFact, ReportTexDownload } from '../lib/reportModels'
 
 function renderMath(tex: string, displayMode = false) {
   return {
@@ -65,8 +66,89 @@ function ReportBlockView({ block }: { block: ReportBlock }) {
   return <div className={`report-note ${block.tone === 'warning' ? 'is-warning' : ''}`}>{block.text}</div>
 }
 
+function buildDownloadUrl(download: ReportTexDownload) {
+  return download.apiBaseUrl
+    ? new URL(download.endpoint, download.apiBaseUrl).toString()
+    : download.endpoint
+}
+
+function buildHealthUrl(download: ReportTexDownload) {
+  return download.apiBaseUrl
+    ? new URL('/api/health', download.apiBaseUrl).toString()
+    : '/api/health'
+}
+
 export function PrintableReportPage({ document }: { document: PrintableReportDocument }) {
   const appUrl = import.meta.env.BASE_URL
+  const [texDownloadAvailable, setTexDownloadAvailable] = useState(false)
+  const [texDownloadStatus, setTexDownloadStatus] = useState<'idle' | 'loading' | 'error'>('idle')
+  const [texDownloadMessage, setTexDownloadMessage] = useState('')
+
+  useEffect(() => {
+    if (!document.texDownload) {
+      setTexDownloadAvailable(false)
+      return
+    }
+
+    const controller = new AbortController()
+
+    const checkTexBackend = async () => {
+      try {
+        const response = await fetch(buildHealthUrl(document.texDownload as ReportTexDownload), {
+          cache: 'no-store',
+          signal: controller.signal,
+        })
+
+        if (!controller.signal.aborted) {
+          setTexDownloadAvailable(response.ok)
+        }
+      } catch {
+        if (!controller.signal.aborted) {
+          setTexDownloadAvailable(false)
+        }
+      }
+    }
+
+    void checkTexBackend()
+
+    return () => {
+      controller.abort()
+    }
+  }, [document.texDownload])
+
+  const downloadTex = async () => {
+    if (!document.texDownload) {
+      return
+    }
+
+    setTexDownloadStatus('loading')
+    setTexDownloadMessage('')
+
+    try {
+      const response = await fetch(buildDownloadUrl(document.texDownload), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(document.texDownload.payload),
+      })
+
+      if (!response.ok) {
+        const errorPayload = await response.json().catch(() => ({ error: 'No se pudo preparar el archivo .tex.' }))
+        throw new Error(errorPayload.error ?? 'No se pudo preparar el archivo .tex.')
+      }
+
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      const link = window.document.createElement('a')
+      link.href = url
+      link.download = document.texDownload.filename
+      link.click()
+      URL.revokeObjectURL(url)
+      setTexDownloadStatus('idle')
+    } catch (error) {
+      setTexDownloadStatus('error')
+      setTexDownloadMessage(error instanceof Error ? error.message : 'No se pudo descargar el archivo .tex.')
+    }
+  }
 
   return (
     <main className="report-shell">
@@ -82,10 +164,17 @@ export function PrintableReportPage({ document }: { document: PrintableReportDoc
           <a className="report-link" href={appUrl}>
             Volver a la aplicación
           </a>
+          {document.texDownload && texDownloadAvailable ? (
+            <button className="report-link" type="button" onClick={downloadTex} disabled={texDownloadStatus === 'loading'}>
+              {texDownloadStatus === 'loading' ? 'Preparando .tex...' : 'Descargar .tex'}
+            </button>
+          ) : null}
           <button className="report-print-button" type="button" onClick={() => window.print()}>
-            Imprimir o guardar como PDF
+            Imprimir
           </button>
         </div>
+
+        {texDownloadMessage ? <p className="report-action-message">{texDownloadMessage}</p> : null}
 
         <FactsGrid items={document.highlights} />
       </header>
