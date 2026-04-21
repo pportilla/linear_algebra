@@ -228,6 +228,16 @@ p {
   color: var(--report-ink);
 }
 
+.report-fact-label.is-math {
+  letter-spacing: 0;
+  text-transform: none;
+  font-size: 0.92rem;
+}
+
+.report-fact-label.is-math .katex {
+  font-size: 1em;
+}
+
 .report-fact-value.is-display {
   overflow-x: auto;
   overflow-y: hidden;

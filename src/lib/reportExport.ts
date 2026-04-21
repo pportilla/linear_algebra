@@ -7,7 +7,7 @@ import type {
   StoredReportRecord,
 } from './reportModels'
 
-const REPORT_STORAGE_PREFIX = 'linear-algebra:report:'
+const REPORT_STORAGE_PREFIX = 'linear-algebra:report:v2:'
 const REPORT_QUERY_PARAM = 'report'
 const MAX_STORED_REPORTS = 12
 const REPORT_RETENTION_MS = 1000 * 60 * 60 * 24 * 3

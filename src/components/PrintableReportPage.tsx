@@ -25,12 +25,20 @@ function FactValue({ fact }: { fact: ReportFact }) {
   return <p className="report-fact-value">{fact.value}</p>
 }
 
+function FactLabel({ fact }: { fact: ReportFact }) {
+  if (fact.labelType === 'math') {
+    return <p className="report-fact-label is-math" dangerouslySetInnerHTML={renderMath(fact.label)} />
+  }
+
+  return <p className="report-fact-label">{fact.label}</p>
+}
+
 function FactsGrid({ items }: { items: ReportFact[] }) {
   return (
     <div className="report-facts-grid">
       {items.map((item) => (
         <div className="report-fact-card" key={`${item.label}-${item.value}`}>
-          <p className="report-fact-label">{item.label}</p>
+          <FactLabel fact={item} />
           <FactValue fact={item} />
         </div>
       ))}

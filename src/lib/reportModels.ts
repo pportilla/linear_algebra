@@ -29,6 +29,7 @@ export interface AffineReportInput {
 
 export interface ReportFact {
   label: string
+  labelType?: 'text' | 'math'
   value: string
   valueType?: 'text' | 'math'
   displayMode?: boolean

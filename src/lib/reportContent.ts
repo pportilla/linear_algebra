@@ -111,11 +111,11 @@ function matrixTex(matrix: number[][]) {
 }
 
 function mathFact(label: string, value: string, displayMode = false): ReportFact {
-  return { label, value, valueType: 'math', displayMode }
+  return { label, labelType: 'math', value, valueType: 'math', displayMode }
 }
 
 function textFact(label: string, value: string): ReportFact {
-  return { label, value, valueType: 'text' }
+  return { label, labelType: 'text', value, valueType: 'text' }
 }
 
 function paragraph(text: string): ReportBlock {
@@ -340,7 +340,7 @@ function buildLinearCanonicalData(matrix: Matrix2, trace: number, determinant: n
     ],
     basisChangeBlocks: [
       paragraph('Para construir la base real adecuada, se toma un autovector complejo z = u + iv asociado al autovalor con parte imaginaria positiva y se separa en sus partes real e imaginaria.'),
-      math(`u=${vectorTex(u)}\\ \\text{(parte real)},\\qquad v=${vectorTex(v)}\\ \\text{(parte imaginaria)}`),
+      math(`u=${vectorTex(u)}\\quad\\text{(parte real)},\\qquad v=${vectorTex(v)}\\quad\\text{(parte imaginaria)}`),
       paragraph('Al ordenar la base real como (v,u), la conjugación reproduce exactamente el bloque canónico real anterior.'),
       math(`P=[\\,v\\ u\\,]=${matrixTex(P)}`),
     ],
