@@ -80,17 +80,18 @@ function buildHealthUrl(download: ReportTexDownload) {
 
 export function PrintableReportPage({ document }: { document: PrintableReportDocument }) {
   const appUrl = import.meta.env.BASE_URL
-  const [texDownloadAvailable, setTexDownloadAvailable] = useState(false)
+  const [texBackendState, setTexBackendState] = useState<'unknown' | 'available' | 'unavailable'>('unknown')
   const [texDownloadStatus, setTexDownloadStatus] = useState<'idle' | 'loading' | 'error'>('idle')
   const [texDownloadMessage, setTexDownloadMessage] = useState('')
 
   useEffect(() => {
     if (!document.texDownload) {
-      setTexDownloadAvailable(false)
+      setTexBackendState('unknown')
       return
     }
 
     const controller = new AbortController()
+    setTexBackendState('unknown')
 
     const checkTexBackend = async () => {
       try {
@@ -100,11 +101,11 @@ export function PrintableReportPage({ document }: { document: PrintableReportDoc
         })
 
         if (!controller.signal.aborted) {
-          setTexDownloadAvailable(response.ok)
+          setTexBackendState(response.ok ? 'available' : 'unavailable')
         }
       } catch {
         if (!controller.signal.aborted) {
-          setTexDownloadAvailable(false)
+          setTexBackendState('unavailable')
         }
       }
     }
@@ -150,6 +151,11 @@ export function PrintableReportPage({ document }: { document: PrintableReportDoc
     }
   }
 
+  const texBackendHint =
+    document.texDownload && texBackendState === 'unavailable'
+      ? 'La descarga .tex necesita el servidor local o una API configurada. El botón sigue visible para que puedas volver a intentarlo en cuanto ese servicio esté disponible.'
+      : ''
+
   return (
     <main className="report-shell">
       <header className="report-hero">
@@ -164,7 +170,7 @@ export function PrintableReportPage({ document }: { document: PrintableReportDoc
           <a className="report-link" href={appUrl}>
             Volver a la aplicación
           </a>
-          {document.texDownload && texDownloadAvailable ? (
+          {document.texDownload ? (
             <button className="report-link" type="button" onClick={downloadTex} disabled={texDownloadStatus === 'loading'}>
               {texDownloadStatus === 'loading' ? 'Preparando .tex...' : 'Descargar .tex'}
             </button>
@@ -174,6 +180,7 @@ export function PrintableReportPage({ document }: { document: PrintableReportDoc
           </button>
         </div>
 
+        {texBackendHint ? <p className="report-action-message is-hint">{texBackendHint}</p> : null}
         {texDownloadMessage ? <p className="report-action-message">{texDownloadMessage}</p> : null}
 
         <FactsGrid items={document.highlights} />
@@ -194,7 +201,7 @@ export function PrintableReportPage({ document }: { document: PrintableReportDoc
 
           {document.closingFacts ? (
             <section className="report-sidebar-card">
-              <p className="report-sidebar-title">Resumen final</p>
+              <p className="report-sidebar-title">Resumen</p>
               <FactsGrid items={document.closingFacts} />
             </section>
           ) : null}
