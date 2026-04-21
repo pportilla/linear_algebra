@@ -111,11 +111,14 @@ function reportUrl(reportId: string) {
 
 function openReportPage(document: PrintableReportDocument) {
   const reportId = storeReportDocument(document)
-  const reportWindow = window.open(reportUrl(reportId), '_blank', 'noopener')
-
-  if (!reportWindow) {
-    throw new Error('El navegador bloqueó la nueva pestaña del informe. Permite pop-ups para abrir la vista matemática imprimible.')
-  }
+  const url = reportUrl(reportId)
+  const link = window.document.createElement('a')
+  link.href = url
+  link.target = '_blank'
+  link.rel = 'noopener noreferrer'
+  window.document.body.appendChild(link)
+  link.click()
+  window.document.body.removeChild(link)
 }
 
 function withTexDownload(document: PrintableReportDocument, texDownload?: ReportTexDownload) {

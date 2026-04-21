@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { PointerEvent, ReactNode, WheelEvent } from 'react'
+import { formatMatrixEntry } from '../lib/math2d'
 import type { Vec2 } from '../lib/math2d'
 
 function ZoomInIcon() {
@@ -681,7 +682,7 @@ export function CartesianPlane({
         {items.map((item) => (
           <span className="legend-chip" key={item.id}>
             <span className="legend-swatch" style={{ backgroundColor: item.color }} />
-            {item.label} = ({item.point.x}, {item.point.y})
+            {item.label} = ({formatMatrixEntry(item.point.x)}, {formatMatrixEntry(item.point.y)})
           </span>
         ))}
         {overlays.map((overlay) => (

@@ -363,7 +363,7 @@ function App() {
             <span aria-label="R cuadrado" dangerouslySetInnerHTML={renderMath('\\mathbb{R}^2')} />
           </h1>
           <p className="hero-copy">
-            Aplicaciones lineales y afines, forma canónica y puntos fijos en <MathText tex="\\mathbb{R}^2" ariaLabel="R cuadrado" />.
+            Aplicaciones lineales y afines, forma canónica y puntos fijos en <MathText tex={"\\mathbb{R}^2"} ariaLabel="R cuadrado" />.
           </p>
         </div>
       </header>
@@ -385,7 +385,7 @@ function App() {
             <div>
               <span className="eyebrow">Aplicación lineal</span>
               <h2>
-                Determinación por una base de <MathText tex="\\mathbb{R}^2" ariaLabel="R cuadrado" />
+                Determinación por una base de <MathText tex={"\\mathbb{R}^2"} ariaLabel="R cuadrado" />
               </h2>
             </div>
             <div className="actions-row">
@@ -430,7 +430,7 @@ function App() {
                   title={
                     <>
                       <span>Aplicación lineal en </span>
-                      <MathText tex="\\mathbb{R}^2" ariaLabel="R cuadrado" />
+                      <MathText tex={"\\mathbb{R}^2"} ariaLabel="R cuadrado" />
                     </>
                   }
                   subtitle="Base elegida y sus imágenes."
@@ -450,7 +450,7 @@ function App() {
                   title={
                     <>
                       <span>Forma canónica en </span>
-                      <MathText tex="\\mathbb{R}^2" ariaLabel="R cuadrado" />
+                      <MathText tex={"\\mathbb{R}^2"} ariaLabel="R cuadrado" />
                     </>
                   }
                   subtitle={linearAnalysis ? 'Representación en la base estándar.' : 'La base elegida no forma una base de ℝ².'}
@@ -492,7 +492,7 @@ function App() {
             <div>
               <span className="eyebrow">Aplicación afín</span>
               <h2>
-                Determinación por tres puntos de <MathText tex="\\mathbb{R}^2" ariaLabel="R cuadrado" />
+                Determinación por tres puntos de <MathText tex={"\\mathbb{R}^2"} ariaLabel="R cuadrado" />
               </h2>
             </div>
             <div className="actions-row">
@@ -541,7 +541,7 @@ function App() {
                   title={
                     <>
                       <span>Aplicación afín en </span>
-                      <MathText tex="\\mathbb{R}^2" ariaLabel="R cuadrado" />
+                      <MathText tex={"\\mathbb{R}^2"} ariaLabel="R cuadrado" />
                     </>
                   }
                   subtitle="Tres puntos origen y sus imágenes."
@@ -569,7 +569,7 @@ function App() {
                   title={
                     <>
                       <span>Forma normal en </span>
-                      <MathText tex="\\mathbb{R}^2" ariaLabel="R cuadrado" />
+                      <MathText tex={"\\mathbb{R}^2"} ariaLabel="R cuadrado" />
                     </>
                   }
                   subtitle={affineAnalysis ? 'Imágenes de O, e1 y e2 en la base estándar.' : 'Los tres puntos origen están alineados.'}
