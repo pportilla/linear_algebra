@@ -47,6 +47,88 @@ function matrixTex(matrix: number[][]) {
     .join('\\\\')}\\end{pmatrix}`
 }
 
+function symbolicNumber(value: number) {
+  const expression = expressionFromNumber(value)
+
+  if (!expression) {
+    throw new Error(`No se pudo convertir ${value} en una expresión racional.`)
+  }
+
+  return expression
+}
+
+function expressionVectorTex(entries: [SymbolicExpression, SymbolicExpression]) {
+  return `\\begin{pmatrix}${entries.map(formatLatexExpression).join('\\\\')}\\end{pmatrix}`
+}
+
+function expressionMatrixTex(matrix: SymbolicExpression[][]) {
+  return `\\begin{pmatrix}${matrix.map((row) => row.map(formatLatexExpression).join(' & ')).join('\\\\')}\\end{pmatrix}`
+}
+
+function symbolicDistinctRealEigenvalues(trace: number, discriminant: number) {
+  const halfTrace = scaleExpression(symbolicNumber(trace), 1, 2)
+  const halfRoot = scaleExpression(
+    squareRootExpressionFromNumber(discriminant) ?? symbolicNumber(Math.sqrt(discriminant)),
+    1,
+    2,
+  )
+
+  return {
+    lambda1: addExpressions(halfTrace, halfRoot),
+    lambda2: subtractExpressions(halfTrace, halfRoot),
+  }
+}
+
+function symbolicComplexEigenParts(trace: number, discriminant: number) {
+  return {
+    realPart: scaleExpression(symbolicNumber(trace), 1, 2),
+    imaginaryPart: scaleExpression(
+      squareRootExpressionFromNumber(-discriminant) ?? symbolicNumber(Math.sqrt(-discriminant)),
+      1,
+      2,
+    ),
+  }
+}
+
+function symbolicMatrixMinusScalar(matrix: Matrix2, lambda: SymbolicExpression) {
+  return [
+    [subtractExpressions(symbolicNumber(matrix[0][0]), lambda), symbolicNumber(matrix[0][1])],
+    [symbolicNumber(matrix[1][0]), subtractExpressions(symbolicNumber(matrix[1][1]), lambda)],
+  ]
+}
+
+function symbolicDistinctRealEigenvector(matrix: Matrix2, lambda: SymbolicExpression, lambdaValue: number): [SymbolicExpression, SymbolicExpression] {
+  const shifted = matrixMinusScalar(matrix, lambdaValue)
+  const row0Norm = Math.abs(shifted[0][0]) + Math.abs(shifted[0][1])
+  const row1Norm = Math.abs(shifted[1][0]) + Math.abs(shifted[1][1])
+
+  if (row0Norm >= row1Norm && row0Norm > EPSILON) {
+    return [symbolicNumber(matrix[0][1]), subtractExpressions(lambda, symbolicNumber(matrix[0][0]))]
+  }
+
+  if (row1Norm > EPSILON) {
+    return [subtractExpressions(lambda, symbolicNumber(matrix[1][1])), symbolicNumber(matrix[1][0])]
+  }
+
+  return [symbolicNumber(1), symbolicNumber(0)]
+}
+
+function symbolicComplexEigenBasis(matrix: Matrix2, realPart: SymbolicExpression, imaginaryPart: SymbolicExpression) {
+  const [[a11, a12], [a21, a22]] = matrix
+
+  if (Math.abs(a12) > EPSILON) {
+    return {
+      u: [symbolicNumber(a12), subtractExpressions(realPart, symbolicNumber(a11))] as [SymbolicExpression, SymbolicExpression],
+      v: [symbolicNumber(0), imaginaryPart] as [SymbolicExpression, SymbolicExpression],
+    }
+  }
+
+  return {
+    u: [subtractExpressions(realPart, symbolicNumber(a22)), symbolicNumber(a21)] as [SymbolicExpression, SymbolicExpression],
+    v: [imaginaryPart, symbolicNumber(0)] as [SymbolicExpression, SymbolicExpression],
+  }
+}
+
 function mathFact(label: string, value: string, displayMode = false): ReportFact {
   return { label, labelType: 'math', value, valueType: 'math', displayMode }
 }

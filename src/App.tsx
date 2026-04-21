@@ -586,7 +586,7 @@ function App() {
       )}
 
       <footer className="footer-note">
-        <p>GNU license by Pablo Portilla.</p>
+        <p>Licencia GNU GPL v3 o posterior. Copyright (C) 2026 Pablo Portilla. Sin garantia.</p>
       </footer>
     </main>
   )
