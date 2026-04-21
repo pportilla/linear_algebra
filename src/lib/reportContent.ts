@@ -284,18 +284,18 @@ function buildLinearCanonicalData(matrix: Matrix2, trace: number, determinant: n
         paragraph('Ahora miramos el discriminante del polinomio característico, porque su signo separa los tres escenarios básicos en dimensión dos.'),
         math(`\\Delta=\\operatorname{tr}(A)^2-4\\det(A)=(${formatTexNumber(trace)})^2-4(${formatTexNumber(determinant)})=${formatTexNumber(discriminant)}>0`),
         paragraph('Aquí sale positivo, así que el polinomio tiene dos raíces reales distintas y aparecen dos direcciones propias independientes.'),
-        math(`\lambda_1=\frac{${formatTexNumber(trace)}+\sqrt{${formatTexNumber(discriminant)}}}{2}=${formatLatexExpression(symbolicEigenvalues.lambda1)},\qquad \lambda_2=\frac{${formatTexNumber(trace)}-\sqrt{${formatTexNumber(discriminant)}}}{2}=${formatLatexExpression(symbolicEigenvalues.lambda2)}`),
+        math(`\\lambda_1=\\frac{${formatTexNumber(trace)}+\\sqrt{${formatTexNumber(discriminant)}}}{2}=${formatLatexExpression(symbolicEigenvalues.lambda1)},\\qquad \\lambda_2=\\frac{${formatTexNumber(trace)}-\\sqrt{${formatTexNumber(discriminant)}}}{2}=${formatLatexExpression(symbolicEigenvalues.lambda2)}`),
         paragraph('Cuando eso ocurre, la matriz es diagonalizable y la forma canónica queda simplemente en diagonal, con cada autovalor ocupando su sitio.'),
         math(`J=${expressionMatrixTex([[symbolicEigenvalues.lambda1, symbolicNumber(0)], [symbolicNumber(0), symbolicEigenvalues.lambda2]])}`),
       ],
       basisChangeBlocks: [
         paragraph('El siguiente paso es construir una base adaptada. Para cada autovalor resolvemos el sistema homogéneo correspondiente y elegimos un vector no nulo del núcleo.'),
         paragraph(`Para el primer autovalor ${formatPlainExpression(symbolicEigenvalues.lambda1)}:`),
-        math(`A-\lambda_1 I=${expressionMatrixTex(symbolicMatrixMinusScalar(matrix, symbolicEigenvalues.lambda1))},\qquad v_1=${expressionVectorTex(symbolicV1)}`),
+        math(`A-\\lambda_1 I=${expressionMatrixTex(symbolicMatrixMinusScalar(matrix, symbolicEigenvalues.lambda1))},\\qquad v_1=${expressionVectorTex(symbolicV1)}`),
         paragraph(`Para el segundo autovalor ${formatPlainExpression(symbolicEigenvalues.lambda2)}:`),
-        math(`A-\lambda_2 I=${expressionMatrixTex(symbolicMatrixMinusScalar(matrix, symbolicEigenvalues.lambda2))},\qquad v_2=${expressionVectorTex(symbolicV2)}`),
+        math(`A-\\lambda_2 I=${expressionMatrixTex(symbolicMatrixMinusScalar(matrix, symbolicEigenvalues.lambda2))},\\qquad v_2=${expressionVectorTex(symbolicV2)}`),
         paragraph('Al colocar esos dos autovectores como columnas obtenemos la matriz de cambio de base que lleva A a la diagonal anterior.'),
-        math(`P=[\,v_1\ v_2\,]=${expressionMatrixTex([[symbolicV1[0], symbolicV2[0]], [symbolicV1[1], symbolicV2[1]]])}`),
+        math(`P=[\\,v_1\\ v_2\\,]=${expressionMatrixTex([[symbolicV1[0], symbolicV2[0]], [symbolicV1[1], symbolicV2[1]]])}`),
       ],
     }
   }
@@ -309,8 +309,6 @@ function buildLinearCanonicalData(matrix: Matrix2, trace: number, determinant: n
         P: [[1, 0], [0, 1]],
         classificationBlocks: [
           paragraph('El discriminante se anula, de modo que sólo aparece un autovalor.'),
-        const symbolicParts = symbolicComplexEigenParts(trace, discriminant)
-        const symbolicBasis = symbolicComplexEigenBasis(matrix, symbolicParts.realPart, symbolicParts.imaginaryPart)
           math(`\\lambda=\\frac{\\operatorname{tr}(A)}{2}=${formatTexNumber(lambda)}`),
           paragraph('Además, al comparar A con lambda por la identidad vemos que no queda ninguna estructura extra por simplificar: todo vector no nulo es autovector y la matriz ya está en su forma canónica.'),
           math(`J=${matrixTex([[lambda, 0], [0, lambda]])}`),
@@ -319,15 +317,14 @@ function buildLinearCanonicalData(matrix: Matrix2, trace: number, determinant: n
           paragraph('Aquí no hace falta buscar una base especial. Cualquier base de R² sirve y, por comodidad, nos quedamos con la base canónica.'),
           math(`P=I=${matrixTex([[1, 0], [0, 1]])}`),
         ],
-            math(`\lambda_{\pm}=${formatLatexExpression(symbolicParts.realPart)}\pm ${formatLatexExpression(symbolicParts.imaginaryPart)}\,i`),
+      }
     }
-            math(`J_{\mathbb R}=${expressionMatrixTex([[symbolicParts.realPart, negateExpression(symbolicParts.imaginaryPart)], [symbolicParts.imaginaryPart, symbolicParts.realPart]])}`),
+
     const v1 = eigenvectorFor(matrix, lambda)
     const v2 = generalizedEigenvectorFor(matrix, lambda, v1)
     const P = matrixFromImages(v1, v2)
-            math(`u=${expressionVectorTex(symbolicBasis.u)}\quad\text{(parte real)},\qquad v=${expressionVectorTex(symbolicBasis.v)}\quad\text{(parte imaginaria)}`),
+
     return {
-            math(`P=[\,v\ u\,]=${expressionMatrixTex([[symbolicBasis.v[0], symbolicBasis.u[0]], [symbolicBasis.v[1], symbolicBasis.u[1]]])}`),
       P,
       classificationBlocks: [
         paragraph('El discriminante vuelve a anularse, así que estamos ante un autovalor doble.'),
@@ -350,6 +347,8 @@ function buildLinearCanonicalData(matrix: Matrix2, trace: number, determinant: n
   const imaginaryPart = Math.sqrt(-discriminant) / 2
   const { u, v } = complexEigenBasis(matrix, realPart, imaginaryPart)
   const P = matrixFromImages(v, u)
+  const symbolicParts = symbolicComplexEigenParts(trace, discriminant)
+  const symbolicBasis = symbolicComplexEigenBasis(matrix, symbolicParts.realPart, symbolicParts.imaginaryPart)
 
   return {
     symbolJ: 'J_{\\mathbb R}',
@@ -358,15 +357,15 @@ function buildLinearCanonicalData(matrix: Matrix2, trace: number, determinant: n
       paragraph('Si el discriminante sale negativo, el polinomio característico ya no tiene raíces reales.'),
       math(`\\Delta=${formatTexNumber(discriminant)}<0`),
       paragraph('En su lugar aparece un par complejo conjugado, que sigue describiendo por completo la dinámica lineal.'),
-      math(`\\lambda_{\\pm}=${formatTexNumber(realPart)}\\pm ${formatTexNumber(imaginaryPart)}\\,i`),
+      math(`\\lambda_{\\pm}=${formatLatexExpression(symbolicParts.realPart)}\\pm ${formatLatexExpression(symbolicParts.imaginaryPart)}\\,i`),
       paragraph('Como estamos trabajando sobre los números reales, sustituimos la diagonal compleja por el bloque real equivalente, que representa la misma rotación-dilatación.'),
-      math(`J_{\\mathbb R}=${matrixTex([[realPart, -imaginaryPart], [imaginaryPart, realPart]])}`),
+      math(`J_{\\mathbb R}=${expressionMatrixTex([[symbolicParts.realPart, negateExpression(symbolicParts.imaginaryPart)], [symbolicParts.imaginaryPart, symbolicParts.realPart]])}`),
     ],
     basisChangeBlocks: [
       paragraph('Para construir la base real adecuada, se toma un autovector complejo z = u + iv asociado al autovalor con parte imaginaria positiva y se separa en sus partes real e imaginaria.'),
-      math(`u=${vectorTex(u)}\\quad\\text{(parte real)},\\qquad v=${vectorTex(v)}\\quad\\text{(parte imaginaria)}`),
+      math(`u=${expressionVectorTex(symbolicBasis.u)}\\quad\\text{(parte real)},\\qquad v=${expressionVectorTex(symbolicBasis.v)}\\quad\\text{(parte imaginaria)}`),
       paragraph('Al ordenar la base real como (v,u), la conjugación reproduce exactamente el bloque canónico real anterior.'),
-      math(`P=[\\,v\\ u\\,]=${matrixTex(P)}`),
+      math(`P=[\\,v\\ u\\,]=${expressionMatrixTex([[symbolicBasis.v[0], symbolicBasis.u[0]], [symbolicBasis.v[1], symbolicBasis.u[1]]])}`),
     ],
   }
 }

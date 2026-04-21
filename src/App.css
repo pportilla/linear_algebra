@@ -6,8 +6,7 @@
 
 .hero-panel,
 .tabs-card,
-.module-card,
-.footer-note {
+.module-card {
   position: relative;
   overflow: hidden;
   border: 1px solid var(--border);
@@ -33,6 +32,12 @@
 }
 
 .hero-title .katex {
+  font-size: 1em;
+}
+
+.hero-copy .katex,
+.module-head .katex,
+.plane-header .katex {
   font-size: 1em;
 }
 
@@ -212,8 +217,7 @@
 .summary-card p,
 .steps-card p,
 .plane-caption,
-.matrix-grid,
-.footer-note p {
+.matrix-grid {
   margin: 0;
 }
 
@@ -442,10 +446,6 @@
   width: 0.7rem;
   height: 0.7rem;
   border-radius: 999px;
-}
-
-.footer-note {
-  padding: 0.85rem 1.15rem;
 }
 
 @media (max-width: 1080px) {

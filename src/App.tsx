@@ -47,6 +47,10 @@ function renderMath(tex: string) {
   }
 }
 
+function MathText({ tex, ariaLabel, className }: { tex: string; ariaLabel: string; className?: string }) {
+  return <span className={className} aria-label={ariaLabel} dangerouslySetInnerHTML={renderMath(tex)} />
+}
+
 function MatrixBlock({ title, rows }: { title: string; rows: number[][] }) {
   return (
     <div className="matrix-block">
@@ -335,7 +339,7 @@ function App() {
     affineAnalysis?.fixedSet.kind === 'line' && affineAnalysis.fixedSet.anchor && affineAnalysis.fixedSet.direction
       ? [{ id: 'fixed-line-source', kind: 'line' as const, anchor: affineAnalysis.fixedSet.anchor, direction: affineAnalysis.fixedSet.direction, color: '#c62828', label: 'Recta fija' }]
       : affineAnalysis?.fixedSet.kind === 'plane'
-        ? [{ id: 'fixed-plane-source', kind: 'plane' as const, color: 'rgba(198, 40, 40, 0.12)', label: 'Todo R² fijo' }]
+        ? [{ id: 'fixed-plane-source', kind: 'plane' as const, color: 'rgba(198, 40, 40, 0.12)', label: 'Todo ℝ² es fijo' }]
         : []
 
   const canonicalFixedSetItems =
@@ -347,7 +351,7 @@ function App() {
     affineAnalysis?.canonicalFixedSet.kind === 'line' && affineAnalysis.canonicalFixedSet.anchor && affineAnalysis.canonicalFixedSet.direction
       ? [{ id: 'fixed-line-canonical', kind: 'line' as const, anchor: affineAnalysis.canonicalFixedSet.anchor, direction: affineAnalysis.canonicalFixedSet.direction, color: '#c62828', label: 'Recta fija' }]
       : affineAnalysis?.canonicalFixedSet.kind === 'plane'
-        ? [{ id: 'fixed-plane-canonical', kind: 'plane' as const, color: 'rgba(198, 40, 40, 0.12)', label: 'Todo R² fijo' }]
+        ? [{ id: 'fixed-plane-canonical', kind: 'plane' as const, color: 'rgba(198, 40, 40, 0.12)', label: 'Todo ℝ² es fijo' }]
         : []
 
   return (
@@ -358,16 +362,19 @@ function App() {
             <span>Transformaciones de</span>{' '}
             <span aria-label="R cuadrado" dangerouslySetInnerHTML={renderMath('\\mathbb{R}^2')} />
           </h1>
+          <p className="hero-copy">
+            Aplicaciones lineales y afines, forma canónica y puntos fijos en <MathText tex="\\mathbb{R}^2" ariaLabel="R cuadrado" />.
+          </p>
         </div>
       </header>
 
       <section className="tabs-card">
         <div className="tabs-row" role="tablist" aria-label="Secciones principales">
           <button type="button" role="tab" aria-selected={activeTab === 'lineal'} className={`tab-button ${activeTab === 'lineal' ? 'is-selected' : ''}`} onClick={() => setActiveTab('lineal')}>
-            Parte lineal
+            Lineal
           </button>
           <button type="button" role="tab" aria-selected={activeTab === 'afin'} className={`tab-button ${activeTab === 'afin' ? 'is-selected' : ''}`} onClick={() => setActiveTab('afin')}>
-            Parte afín
+            Afín
           </button>
         </div>
       </section>
@@ -376,8 +383,10 @@ function App() {
         <section className="module-card">
           <div className="module-head">
             <div>
-              <span className="eyebrow">Parte lineal</span>
-              <h2>Base elegida y su imagen</h2>
+              <span className="eyebrow">Aplicación lineal</span>
+              <h2>
+                Determinación por una base de <MathText tex="\\mathbb{R}^2" ariaLabel="R cuadrado" />
+              </h2>
             </div>
             <div className="actions-row">
               <button type="button" className="ghost-button" onClick={resetLinearState}>
@@ -418,8 +427,14 @@ function App() {
             <div className="visual-panel">
               <div className="plane-stack">
                 <CartesianPlane
-                  title="Datos de la aplicación lineal"
-                  subtitle="Base e imagen de la base."
+                  title={
+                    <>
+                      <span>Aplicación lineal en </span>
+                      <MathText tex="\\mathbb{R}^2" ariaLabel="R cuadrado" />
+                    </>
+                  }
+                  subtitle="Base elegida y sus imágenes."
+                  ariaLabel="Aplicación lineal en R cuadrado"
                   range={5}
                   activeId={activeLinearPoint}
                   onActivate={(id) => setActiveLinearPoint(id as LinearPointId)}
@@ -432,8 +447,14 @@ function App() {
                   ]}
                 />
                 <CartesianPlane
-                  title="Representante canónico en vivo"
-                  subtitle={linearAnalysis ? 'Forma canónica.' : 'Base no invertible.'}
+                  title={
+                    <>
+                      <span>Forma canónica en </span>
+                      <MathText tex="\\mathbb{R}^2" ariaLabel="R cuadrado" />
+                    </>
+                  }
+                  subtitle={linearAnalysis ? 'Representación en la base estándar.' : 'La base elegida no forma una base de ℝ².'}
+                  ariaLabel="Forma canónica lineal en R cuadrado"
                   range={5}
                   items={canonicalLinearItems}
                 />
@@ -447,10 +468,10 @@ function App() {
               ) : null}
 
               <div className="steps-card">
-                <span className="eyebrow">Explicación automática</span>
+                <span className="eyebrow">Clasificación lineal</span>
                 <h3>{linearAnalysis ? linearAnalysis.caseLabel : 'Base no válida'}</h3>
                 <p>
-                  {linearAnalysis ? linearAnalysis.shortText : 'La aplicación lineal no se puede reconstruir mientras la base elegida no sea linealmente independiente.'}
+                  {linearAnalysis ? linearAnalysis.shortText : 'La aplicación lineal queda indeterminada mientras b1 y b2 no formen una base de ℝ².'}
                 </p>
                 <ol>
                   {linearAnalysis
@@ -469,8 +490,10 @@ function App() {
         <section className="module-card">
           <div className="module-head">
             <div>
-              <span className="eyebrow">Parte afín</span>
-              <h2>Tres puntos afínmente independientes e imágenes</h2>
+              <span className="eyebrow">Aplicación afín</span>
+              <h2>
+                Determinación por tres puntos de <MathText tex="\\mathbb{R}^2" ariaLabel="R cuadrado" />
+              </h2>
             </div>
             <div className="actions-row">
               <button type="button" className="ghost-button" onClick={resetAffineState}>
@@ -515,8 +538,14 @@ function App() {
             <div className="visual-panel">
               <div className="plane-stack">
                 <CartesianPlane
-                  title="Datos afines"
-                  subtitle="Puntos e imágenes."
+                  title={
+                    <>
+                      <span>Aplicación afín en </span>
+                      <MathText tex="\\mathbb{R}^2" ariaLabel="R cuadrado" />
+                    </>
+                  }
+                  subtitle="Tres puntos origen y sus imágenes."
+                  ariaLabel="Aplicación afín en R cuadrado"
                   range={5}
                   activeId={activeAffinePoint}
                   onActivate={(id) => setActiveAffinePoint(id as PointId)}
@@ -537,8 +566,14 @@ function App() {
                   ]}
                 />
                 <CartesianPlane
-                  title="Forma normal en la referencia estándar"
-                  subtitle={affineAnalysis ? 'Puntos O, e1 y e2 junto a sus imágenes por la forma normal.' : 'Datos degenerados.'}
+                  title={
+                    <>
+                      <span>Forma normal en </span>
+                      <MathText tex="\\mathbb{R}^2" ariaLabel="R cuadrado" />
+                    </>
+                  }
+                  subtitle={affineAnalysis ? 'Imágenes de O, e1 y e2 en la base estándar.' : 'Los tres puntos origen están alineados.'}
+                  ariaLabel="Forma normal afín en R cuadrado"
                   range={5}
                   items={[
                     { id: 's0', label: 'O', point: { x: 0, y: 0 }, color: '#b55233', kind: 'point' },
@@ -569,7 +604,7 @@ function App() {
               <div className="steps-card">
                 <span className="eyebrow">Clasificación afín</span>
                 <h3>{affineAnalysis ? affineAnalysis.caseLabel : 'Datos afines no válidos'}</h3>
-                <p>{affineAnalysis ? affineAnalysis.shortText : 'La clasificación afín necesita que p0, p1 y p2 sean afínmente independientes.'}</p>
+                <p>{affineAnalysis ? affineAnalysis.shortText : 'La clasificación afín requiere que p0, p1 y p2 formen una referencia afín de ℝ².'}</p>
                 <ol>
                   {affineAnalysis
                     ? affineAnalysis.steps.map((step) => <li key={step}>{step}</li>)
@@ -584,10 +619,6 @@ function App() {
           </div>
         </section>
       )}
-
-      <footer className="footer-note">
-        <p>Licencia GNU GPL v3 o posterior. Copyright (C) 2026 Pablo Portilla. Sin garantia.</p>
-      </footer>
     </main>
   )
 }

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { PointerEvent, WheelEvent } from 'react'
+import type { PointerEvent, ReactNode, WheelEvent } from 'react'
 import type { Vec2 } from '../lib/math2d'
 
 function ZoomInIcon() {
@@ -58,8 +58,9 @@ interface PlaneOverlay {
 }
 
 interface CartesianPlaneProps {
-  title: string
-  subtitle: string
+  title: ReactNode
+  subtitle: ReactNode
+  ariaLabel?: string
   range: number
   items: PlaneItem[]
   polygons?: PlanePolygon[]
@@ -207,6 +208,7 @@ function fitViewBounds(points: Vec2[], fallbackRange: number) {
 export function CartesianPlane({
   title,
   subtitle,
+  ariaLabel,
   range,
   items,
   polygons = [],
@@ -490,7 +492,7 @@ export function CartesianPlane({
           onPointerCancel={handlePointerCancel}
           onWheel={handleWheel}
           role="img"
-          aria-label={title}
+          aria-label={ariaLabel ?? (typeof title === 'string' ? title : 'Plano cartesiano')}
         >
         <g pointerEvents="none">
           {xMinorTicks.map((value) => {
