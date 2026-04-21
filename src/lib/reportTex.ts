@@ -10,9 +10,19 @@ import {
   trace2,
 } from './math2d'
 import type { Matrix2, Vec2 } from './math2d'
+import {
+  addExpressions,
+  expressionFromNumber,
+  formatLatexExpression,
+  formatLatexNumber as formatNumber,
+  negateExpression,
+  scaleExpression,
+  squareRootExpressionFromNumber,
+  subtractExpressions,
+  type SymbolicExpression,
+} from './symbolicMath'
 
 const EPSILON = 1e-8
-const MAX_FRACTION_DENOMINATOR = 1000
 
 export interface LinearTexPayload {
   basis: {
@@ -81,82 +91,90 @@ function vecToLatex(vector: Vec2) {
   return `\\begin{pmatrix}${formatNumber(vector.x)}\\\\${formatNumber(vector.y)}\\end{pmatrix}`
 }
 
-function greatestCommonDivisor(left: number, right: number) {
-  let a = Math.abs(left)
-  let b = Math.abs(right)
-
-  while (b !== 0) {
-    const remainder = a % b
-    a = b
-    b = remainder
-  }
-
-  return a || 1
-}
-
-function approximateFraction(value: number) {
-  const clean = Math.abs(value) < EPSILON ? 0 : value
-
-  if (!Number.isFinite(clean)) {
-    return null
-  }
-
-  let bestNumerator = Math.round(clean)
-  let bestDenominator = 1
-  let bestError = Math.abs(clean - bestNumerator)
-
-  if (bestError < EPSILON) {
-    return { numerator: bestNumerator, denominator: 1 }
-  }
-
-  for (let denominator = 1; denominator <= MAX_FRACTION_DENOMINATOR; denominator += 1) {
-    const numerator = Math.round(clean * denominator)
-    const approximation = numerator / denominator
-    const error = Math.abs(clean - approximation)
-
-    if (error < bestError) {
-      bestNumerator = numerator
-      bestDenominator = denominator
-      bestError = error
-    }
-
-    if (error < EPSILON) {
-      break
-    }
-  }
-
-  if (bestError > 1e-7) {
-    return null
-  }
-
-  const divisor = greatestCommonDivisor(bestNumerator, bestDenominator)
-  return {
-    numerator: bestNumerator / divisor,
-    denominator: bestDenominator / divisor,
-  }
-}
-
-function formatNumber(value: number) {
-  const clean = Math.abs(value) < EPSILON ? 0 : value
-  const fraction = approximateFraction(clean)
-
-  if (fraction) {
-    if (fraction.denominator === 1) {
-      return fraction.numerator.toString()
-    }
-
-    if (fraction.numerator < 0) {
-      return `-\\frac{${Math.abs(fraction.numerator)}}{${fraction.denominator}}`
-    }
-
-    return `\\frac{${fraction.numerator}}{${fraction.denominator}}`
-  }
-
-  return Number(clean.toPrecision(8)).toString()
-}
-
 function matrixToLatex(matrix: number[][]) {
   return `\\begin{pmatrix}${matrix.map((row) => row.map(formatNumber).join(' & ')).join('\\\\')}\\end{pmatrix}`
+}
+
+function symbolicNumber(value: number) {
+  const expression = expressionFromNumber(value)
+
+  if (!expression) {
+    throw new Error(`No se pudo convertir ${value} en una expresión racional.`)
+  }
+
+  return expression
+}
+
+function expressionVectorToLatex(entries: [SymbolicExpression, SymbolicExpression]) {
+  return `\\begin{pmatrix}${entries.map(formatLatexExpression).join('\\\\')}\\end{pmatrix}`
+}
+
+function expressionMatrixToLatex(matrix: SymbolicExpression[][]) {
+  return `\\begin{pmatrix}${matrix.map((row) => row.map(formatLatexExpression).join(' & ')).join('\\\\')}\\end{pmatrix}`
+}
+
+function symbolicDistinctRealEigenvalues(trace: number, discriminant: number) {
+  const halfTrace = scaleExpression(symbolicNumber(trace), 1, 2)
+  const halfRoot = scaleExpression(
+    squareRootExpressionFromNumber(discriminant) ?? symbolicNumber(Math.sqrt(discriminant)),
+    1,
+    2,
+  )
+
+  return {
+    lambda1: addExpressions(halfTrace, halfRoot),
+    lambda2: subtractExpressions(halfTrace, halfRoot),
+  }
+}
+
+function symbolicComplexEigenParts(trace: number, discriminant: number) {
+  return {
+    realPart: scaleExpression(symbolicNumber(trace), 1, 2),
+    imaginaryPart: scaleExpression(
+      squareRootExpressionFromNumber(-discriminant) ?? symbolicNumber(Math.sqrt(-discriminant)),
+      1,
+      2,
+    ),
+  }
+}
+
+function symbolicMatrixMinusScalar(matrix: Matrix2, lambda: SymbolicExpression) {
+  return [
+    [subtractExpressions(symbolicNumber(matrix[0][0]), lambda), symbolicNumber(matrix[0][1])],
+    [symbolicNumber(matrix[1][0]), subtractExpressions(symbolicNumber(matrix[1][1]), lambda)],
+  ]
+}
+
+function symbolicDistinctRealEigenvector(matrix: Matrix2, lambda: SymbolicExpression, lambdaValue: number): [SymbolicExpression, SymbolicExpression] {
+  const shifted = matrixMinusScalar(matrix, lambdaValue)
+  const row0Norm = Math.abs(shifted[0][0]) + Math.abs(shifted[0][1])
+  const row1Norm = Math.abs(shifted[1][0]) + Math.abs(shifted[1][1])
+
+  if (row0Norm >= row1Norm && row0Norm > EPSILON) {
+    return [symbolicNumber(matrix[0][1]), subtractExpressions(lambda, symbolicNumber(matrix[0][0]))]
+  }
+
+  if (row1Norm > EPSILON) {
+    return [subtractExpressions(lambda, symbolicNumber(matrix[1][1])), symbolicNumber(matrix[1][0])]
+  }
+
+  return [symbolicNumber(1), symbolicNumber(0)]
+}
+
+function symbolicComplexEigenBasis(matrix: Matrix2, realPart: SymbolicExpression, imaginaryPart: SymbolicExpression) {
+  const [[a11, a12], [a21, a22]] = matrix
+
+  if (Math.abs(a12) > EPSILON) {
+    return {
+      u: [symbolicNumber(a12), subtractExpressions(realPart, symbolicNumber(a11))] as [SymbolicExpression, SymbolicExpression],
+      v: [symbolicNumber(0), imaginaryPart] as [SymbolicExpression, SymbolicExpression],
+    }
+  }
+
+  return {
+    u: [subtractExpressions(realPart, symbolicNumber(a22)), symbolicNumber(a21)] as [SymbolicExpression, SymbolicExpression],
+    v: [imaginaryPart, symbolicNumber(0)] as [SymbolicExpression, SymbolicExpression],
+  }
 }
 
 function isScalarMatrix(matrix: Matrix2, scalar: number) {
@@ -372,22 +390,25 @@ function buildLinearCanonical(matrix: Matrix2, analysis: LinearTexAnalysis): Lin
     const v1 = eigenvectorFor(matrix, analysis.lambda1)
     const v2 = eigenvectorFor(matrix, analysis.lambda2)
     const P = matrixFromImages(v1, v2)
+    const symbolicEigenvalues = symbolicDistinctRealEigenvalues(analysis.trace, analysis.discriminant)
+    const symbolicV1 = symbolicDistinctRealEigenvector(matrix, symbolicEigenvalues.lambda1, analysis.lambda1)
+    const symbolicV2 = symbolicDistinctRealEigenvector(matrix, symbolicEigenvalues.lambda2, analysis.lambda2)
     return {
       v1,
       v2,
       P,
       canonical: analysis.canonicalMatrix,
       body: `
-Tenemos dos autovalores reales distintos, $\\lambda_1=${formatNumber(analysis.lambda1)}$ y $\\lambda_2=${formatNumber(analysis.lambda2)}$. Para cada uno buscamos un autovector resolviendo $(A-\\lambda_i I)\\,v=0$:
+Tenemos dos autovalores reales distintos, $\\lambda_1=${formatLatexExpression(symbolicEigenvalues.lambda1)}$ y $\\lambda_2=${formatLatexExpression(symbolicEigenvalues.lambda2)}$. Para cada uno buscamos un autovector resolviendo $(A-\\lambda_i I)\\,v=0$:
 \\[
-A-\\lambda_1 I=${matrixToLatex(matrixMinusScalar(matrix, analysis.lambda1))}\\ \\implies\\ v_1=${vecToLatex(v1)},
+A-\\lambda_1 I=${expressionMatrixToLatex(symbolicMatrixMinusScalar(matrix, symbolicEigenvalues.lambda1))}\\ \\implies\\ v_1=${expressionVectorToLatex(symbolicV1)},
 \\]
 \\[
-A-\\lambda_2 I=${matrixToLatex(matrixMinusScalar(matrix, analysis.lambda2))}\\ \\implies\\ v_2=${vecToLatex(v2)}.
+A-\\lambda_2 I=${expressionMatrixToLatex(symbolicMatrixMinusScalar(matrix, symbolicEigenvalues.lambda2))}\\ \\implies\\ v_2=${expressionVectorToLatex(symbolicV2)}.
 \\]
-Colocando los autovectores como columnas obtenemos $P=[\\,v_1\\ v_2\\,]=${matrixToLatex(P)}$, y la forma canónica correspondiente es
+Colocando los autovectores como columnas obtenemos $P=[\\,v_1\\ v_2\\,]=${expressionMatrixToLatex([[symbolicV1[0], symbolicV2[0]], [symbolicV1[1], symbolicV2[1]]])}$, y la forma canónica correspondiente es
 \\[
-J=${matrixToLatex(analysis.canonicalMatrix)}.
+J=${expressionMatrixToLatex([[symbolicEigenvalues.lambda1, symbolicNumber(0)], [symbolicNumber(0), symbolicEigenvalues.lambda2]])}.
 \\]
 `,
     }
@@ -437,19 +458,21 @@ J=${matrixToLatex(analysis.canonicalMatrix)}.
   const complexAnalysis = analysis as ComplexPairAnalysis
   const { u, v } = complexEigenBasis(matrix, complexAnalysis.realPart, complexAnalysis.imaginaryPart)
   const P = matrixFromImages(v, u)
+  const symbolicParts = symbolicComplexEigenParts(complexAnalysis.trace, complexAnalysis.discriminant)
+  const symbolicBasis = symbolicComplexEigenBasis(matrix, symbolicParts.realPart, symbolicParts.imaginaryPart)
   return {
     v1: v,
     v2: u,
     P,
     canonical: complexAnalysis.canonicalMatrix,
     body: `
-Los autovalores son complejos conjugados, $\\lambda_{\\pm}=${formatNumber(complexAnalysis.realPart)}\\pm ${formatNumber(complexAnalysis.imaginaryPart)}\\,i$. Buscamos un autovector complejo de $\\lambda_+$ y lo descomponemos en parte real e imaginaria:
+Los autovalores son complejos conjugados, $\\lambda_{\\pm}=${formatLatexExpression(symbolicParts.realPart)}\\pm ${formatLatexExpression(symbolicParts.imaginaryPart)}\\,i$. Buscamos un autovector complejo de $\\lambda_+$ y lo descomponemos en parte real e imaginaria:
 \\[
-u=${vecToLatex(u)}\\ \\text{(parte real)},\\qquad v=${vecToLatex(v)}\\ \\text{(parte imaginaria)}.
+u=${expressionVectorToLatex(symbolicBasis.u)}\\ \\text{(parte real)},\\qquad v=${expressionVectorToLatex(symbolicBasis.v)}\\ \\text{(parte imaginaria)}.
 \\]
 Para que la conjugación dé exactamente el bloque $\\begin{pmatrix}a & -b\\\\b & a\\end{pmatrix}$, colocamos la parte imaginaria en la primera columna:
 \\[
-P=[\\,v\\ u\\,]=${matrixToLatex(P)},\\qquad J_{\\mathbb R}=${matrixToLatex(complexAnalysis.canonicalMatrix)}.
+P=[\\,v\\ u\\,]=${expressionMatrixToLatex([[symbolicBasis.v[0], symbolicBasis.u[0]], [symbolicBasis.v[1], symbolicBasis.u[1]]])},\\qquad J_{\\mathbb R}=${expressionMatrixToLatex([[symbolicParts.realPart, negateExpression(symbolicParts.imaginaryPart)], [symbolicParts.imaginaryPart, symbolicParts.realPart]])}.
 \\]
 `,
   }
@@ -695,13 +718,18 @@ export function buildLinearTex(payload: LinearTexPayload) {
   const analysis = classifyLinear(matrix)
   const characteristic = `p_A(x)=x^2-(${formatNumber(analysis.trace)})x+(${formatNumber(analysis.determinant)})`
   const canonical = buildLinearCanonical(matrix, analysis)
-  const invP = inverse2(canonical.P)
-  const verification = invP ? multiplyMatrices(multiplyMatrices(invP, matrix), canonical.P) : canonical.canonical
+  let pDisplay = matrixToLatex(canonical.P)
+  let canonicalDisplay = matrixToLatex(analysis.canonicalMatrix)
 
   let caseTitle = ''
   let caseBody = ''
 
   if (analysis.caseId === 'distinct-real') {
+    const symbolicEigenvalues = symbolicDistinctRealEigenvalues(analysis.trace, analysis.discriminant)
+    const symbolicV1 = symbolicDistinctRealEigenvector(matrix, symbolicEigenvalues.lambda1, analysis.lambda1)
+    const symbolicV2 = symbolicDistinctRealEigenvector(matrix, symbolicEigenvalues.lambda2, analysis.lambda2)
+    pDisplay = expressionMatrixToLatex([[symbolicV1[0], symbolicV2[0]], [symbolicV1[1], symbolicV2[1]]])
+    canonicalDisplay = expressionMatrixToLatex([[symbolicEigenvalues.lambda1, symbolicNumber(0)], [symbolicNumber(0), symbolicEigenvalues.lambda2]])
     caseTitle = 'dos autovalores reales distintos'
     caseBody = `
 \\subsection*{Paso 6. Clasificación y autovalores}
@@ -711,35 +739,35 @@ Calculamos el discriminante del polinomio característico:
 \\]
 Al ser positivo, $p_A$ tiene dos raíces reales distintas,
 \\[
-\\lambda_1=\\frac{${formatNumber(analysis.trace)}+\\sqrt{${formatNumber(analysis.discriminant)}}}{2}=${formatNumber(analysis.lambda1)},
+\\lambda_1=\\frac{${formatNumber(analysis.trace)}+\\sqrt{${formatNumber(analysis.discriminant)}}}{2}=${formatLatexExpression(symbolicEigenvalues.lambda1)},
 \\qquad
-\\lambda_2=\\frac{${formatNumber(analysis.trace)}-\\sqrt{${formatNumber(analysis.discriminant)}}}{2}=${formatNumber(analysis.lambda2)}.
+\\lambda_2=\\frac{${formatNumber(analysis.trace)}-\\sqrt{${formatNumber(analysis.discriminant)}}}{2}=${formatLatexExpression(symbolicEigenvalues.lambda2)}.
 \\]
 Con dos autovalores reales distintos, $A$ es diagonalizable y su forma de Jordan es la matriz diagonal formada por esos autovalores:
 \\[
-J=${matrixToLatex(analysis.canonicalMatrix)}.
+J=${expressionMatrixToLatex([[symbolicEigenvalues.lambda1, symbolicNumber(0)], [symbolicNumber(0), symbolicEigenvalues.lambda2]])}.
 \\]
 
 \\subsection*{Paso 7. Autovectores y matriz de cambio de base}
 Para cada autovalor buscamos un vector columna no nulo que cumpla $(A-\\lambda_i I)\\,v=0$. Como $A-\\lambda_i I$ es singular, podemos tomar un vector perpendicular a cualquiera de sus filas no nulas.
 
-Para $\\lambda_1=${formatNumber(analysis.lambda1)}$:
+Para $\\lambda_1=${formatLatexExpression(symbolicEigenvalues.lambda1)}$:
 \\[
-A-\\lambda_1 I=${matrixToLatex(matrixMinusScalar(matrix, analysis.lambda1))}
+A-\\lambda_1 I=${expressionMatrixToLatex(symbolicMatrixMinusScalar(matrix, symbolicEigenvalues.lambda1))}
 \\quad\\implies\\quad
-v_1=${vecToLatex(canonical.v1)}.
+v_1=${expressionVectorToLatex(symbolicV1)}.
 \\]
 
-Para $\\lambda_2=${formatNumber(analysis.lambda2)}$:
+Para $\\lambda_2=${formatLatexExpression(symbolicEigenvalues.lambda2)}$:
 \\[
-A-\\lambda_2 I=${matrixToLatex(matrixMinusScalar(matrix, analysis.lambda2))}
+A-\\lambda_2 I=${expressionMatrixToLatex(symbolicMatrixMinusScalar(matrix, symbolicEigenvalues.lambda2))}
 \\quad\\implies\\quad
-v_2=${vecToLatex(canonical.v2)}.
+v_2=${expressionVectorToLatex(symbolicV2)}.
 \\]
 
 Pegamos los dos autovectores como columnas para formar la matriz de cambio de base:
 \\[
-P=[\\,v_1\\ v_2\\,]=${matrixToLatex(canonical.P)}.
+P=[\\,v_1\\ v_2\\,]=${expressionMatrixToLatex([[symbolicV1[0], symbolicV2[0]], [symbolicV1[1], symbolicV2[1]]])}.
 \\]
 `
   } else if (analysis.caseId === 'scalar') {
@@ -789,6 +817,10 @@ P=[\\,v_1\\ v_2\\,]=${matrixToLatex(canonical.P)}.
 `
   } else {
     const complexAnalysis = analysis as ComplexPairAnalysis
+    const symbolicParts = symbolicComplexEigenParts(complexAnalysis.trace, complexAnalysis.discriminant)
+    const symbolicBasis = symbolicComplexEigenBasis(matrix, symbolicParts.realPart, symbolicParts.imaginaryPart)
+    pDisplay = expressionMatrixToLatex([[symbolicBasis.v[0], symbolicBasis.u[0]], [symbolicBasis.v[1], symbolicBasis.u[1]]])
+    canonicalDisplay = expressionMatrixToLatex([[symbolicParts.realPart, negateExpression(symbolicParts.imaginaryPart)], [symbolicParts.imaginaryPart, symbolicParts.realPart]])
     caseTitle = 'par de autovalores complejos conjugados'
     caseBody = `
 \\subsection*{Paso 6. Clasificación y autovalores complejos}
@@ -798,21 +830,21 @@ El discriminante es negativo,
 \\]
 así que $p_A$ no tiene raíces reales: los autovalores son complejos conjugados,
 \\[
-\\lambda_{\\pm}=${formatNumber(complexAnalysis.realPart)}\\pm ${formatNumber(complexAnalysis.imaginaryPart)}\\,i.
+\\lambda_{\\pm}=${formatLatexExpression(symbolicParts.realPart)}\\pm ${formatLatexExpression(symbolicParts.imaginaryPart)}\\,i.
 \\]
 Sobre $\\mathbb R$ no existe una forma de Jordan real. En su lugar usamos el bloque canónico real
 \\[
-J_{\\mathbb R}=${matrixToLatex(complexAnalysis.canonicalMatrix)}.
+J_{\\mathbb R}=${expressionMatrixToLatex([[symbolicParts.realPart, negateExpression(symbolicParts.imaginaryPart)], [symbolicParts.imaginaryPart, symbolicParts.realPart]])}.
 \\]
 
 \\subsection*{Paso 7. Autovector complejo y base real}
 Buscamos un autovector complejo $z=u+iv$ asociado a $\\lambda_+=a+bi$ como núcleo complejo de $A-\\lambda_+ I$, y lo separamos en parte real e imaginaria:
 \\[
-u=${vecToLatex(canonical.v2)}\\ \\text{(parte real)},\\qquad v=${vecToLatex(canonical.v1)}\\ \\text{(parte imaginaria)}.
+u=${expressionVectorToLatex(symbolicBasis.u)}\\ \\text{(parte real)},\\qquad v=${expressionVectorToLatex(symbolicBasis.v)}\\ \\text{(parte imaginaria)}.
 \\]
 Si ordenamos la base como $(v,u)$ —parte imaginaria primero—, la conjugación reproduce exactamente el bloque $\\begin{pmatrix}a & -b\\\\b & a\\end{pmatrix}$:
 \\[
-P=[\\,v\\ u\\,]=${matrixToLatex(canonical.P)}.
+P=[\\,v\\ u\\,]=${expressionMatrixToLatex([[symbolicBasis.v[0], symbolicBasis.u[0]], [symbolicBasis.v[1], symbolicBasis.u[1]]])}.
 \\]
 `
   }
@@ -878,7 +910,7 @@ Se invierte la matriz de cambio de base y se comprueba que $P^{-1}AP=${symbolJ}$
 ${linearInverseNarrative(canonical.P, 'P')}
 Efectuando el producto,
 \\[
-P^{-1}AP=${matrixToLatex(verification)}=${matrixToLatex(analysis.canonicalMatrix)}=${symbolJ}.
+P^{-1}AP=${canonicalDisplay}=${symbolJ}.
 \\]
 
 \\subsection*{Resumen final}
@@ -897,9 +929,9 @@ Conclusión:
 \\[
 A=${matrixToLatex(matrix)},
 \\qquad
-P=${matrixToLatex(canonical.P)},
+P=${pDisplay},
 \\qquad
-${symbolJ}=${matrixToLatex(analysis.canonicalMatrix)}.
+${symbolJ}=${canonicalDisplay}.
 \\]
 \\end{document}
 `

@@ -4,6 +4,16 @@ export type Homogeneous3 = [number[], number[], number[]]
 export type PointId = 'p0' | 'p1' | 'p2' | 'q0' | 'q1' | 'q2'
 export type LinearPointId = 'b1' | 'b2' | 'tb1' | 'tb2'
 
+import {
+  addExpressions,
+  expressionFromNumber,
+  formatPlainExpression,
+  formatPlainNumber,
+  scaleExpression,
+  squareRootExpressionFromNumber,
+  subtractExpressions,
+} from './symbolicMath'
+
 export interface LinearMapData {
   basisMatrix: Matrix2
   imageMatrix: Matrix2
@@ -49,75 +59,43 @@ export interface AffineFixedSet {
 }
 
 const EPSILON = 1e-8
-const MAX_FRACTION_DENOMINATOR = 1000
 
 export function formatMatrixEntry(value: number) {
-  const clean = Math.abs(value) < EPSILON ? 0 : value
-  const fraction = approximateFraction(clean)
-
-  if (fraction) {
-    if (fraction.denominator === 1) {
-      return fraction.numerator.toString()
-    }
-
-    return `${fraction.numerator}/${fraction.denominator}`
-  }
-
-  return Number(clean.toPrecision(8)).toString()
+  return formatPlainNumber(value)
 }
 
-function greatestCommonDivisor(left: number, right: number) {
-  let a = Math.abs(left)
-  let b = Math.abs(right)
+function symbolicNumber(value: number) {
+  const expression = expressionFromNumber(value)
 
-  while (b !== 0) {
-    const remainder = a % b
-    a = b
-    b = remainder
+  if (!expression) {
+    throw new Error(`No se pudo convertir ${value} en una expresión racional.`)
   }
 
-  return a || 1
+  return expression
 }
 
-function approximateFraction(value: number) {
-  const clean = Math.abs(value) < EPSILON ? 0 : value
+function symbolicDistinctRealEigenvalues(trace: number, discriminant: number) {
+  const halfTrace = scaleExpression(symbolicNumber(trace), 1, 2)
+  const halfRoot = scaleExpression(
+    squareRootExpressionFromNumber(discriminant) ?? symbolicNumber(Math.sqrt(discriminant)),
+    1,
+    2,
+  )
 
-  if (!Number.isFinite(clean)) {
-    return null
-  }
-
-  let bestNumerator = Math.round(clean)
-  let bestDenominator = 1
-  let bestError = Math.abs(clean - bestNumerator)
-
-  if (bestError < EPSILON) {
-    return { numerator: bestNumerator, denominator: 1 }
-  }
-
-  for (let denominator = 1; denominator <= MAX_FRACTION_DENOMINATOR; denominator += 1) {
-    const numerator = Math.round(clean * denominator)
-    const approximation = numerator / denominator
-    const error = Math.abs(clean - approximation)
-
-    if (error < bestError) {
-      bestNumerator = numerator
-      bestDenominator = denominator
-      bestError = error
-    }
-
-    if (error < EPSILON) {
-      break
-    }
-  }
-
-  if (bestError > 1e-7) {
-    return null
-  }
-
-  const divisor = greatestCommonDivisor(bestNumerator, bestDenominator)
   return {
-    numerator: bestNumerator / divisor,
-    denominator: bestDenominator / divisor,
+    lambda1: addExpressions(halfTrace, halfRoot),
+    lambda2: subtractExpressions(halfTrace, halfRoot),
+  }
+}
+
+function symbolicComplexEigenParts(trace: number, discriminant: number) {
+  return {
+    realPart: scaleExpression(symbolicNumber(trace), 1, 2),
+    imaginaryPart: scaleExpression(
+      squareRootExpressionFromNumber(-discriminant) ?? symbolicNumber(Math.sqrt(-discriminant)),
+      1,
+      2,
+    ),
   }
 }
 
@@ -297,6 +275,7 @@ export function classifyLinearMap(sourceMatrix: Matrix2): LinearAnalysis {
     const root = Math.sqrt(discriminant)
     const lambda1 = (trace + root) / 2
     const lambda2 = (trace - root) / 2
+    const symbolicEigenvalues = symbolicDistinctRealEigenvalues(trace, discriminant)
     return {
       sourceMatrix,
       canonicalMatrix: [[lambda1, 0], [0, lambda2]],
@@ -308,7 +287,7 @@ export function classifyLinearMap(sourceMatrix: Matrix2): LinearAnalysis {
       steps: [
         `Primero se calculan la traza ${formatMatrixEntry(trace)} y el determinante ${formatMatrixEntry(determinant)}.`,
         `Después se mira el discriminante del polinomio característico, que vale ${formatMatrixEntry(discriminant)} y sale positivo.`,
-        `Eso da dos autovalores reales distintos: ${formatMatrixEntry(lambda1)} y ${formatMatrixEntry(lambda2)}.`,
+        `Eso da dos autovalores reales distintos: ${formatPlainExpression(symbolicEigenvalues.lambda1)} y ${formatPlainExpression(symbolicEigenvalues.lambda2)}.`,
         'Como aparecen dos direcciones propias independientes, la matriz se puede diagonalizar.',
         'La forma canónica queda en la diagonal formada por esos dos autovalores.',
       ],
@@ -363,6 +342,7 @@ export function classifyLinearMap(sourceMatrix: Matrix2): LinearAnalysis {
 
   const realPart = trace / 2
   const imaginaryPart = Math.sqrt(-discriminant) / 2
+  const symbolicParts = symbolicComplexEigenParts(trace, discriminant)
   return {
     sourceMatrix,
     canonicalMatrix: [[realPart, -imaginaryPart], [imaginaryPart, realPart]],
@@ -374,7 +354,7 @@ export function classifyLinearMap(sourceMatrix: Matrix2): LinearAnalysis {
     steps: [
       `Primero se calculan la traza ${formatMatrixEntry(trace)} y el determinante ${formatMatrixEntry(determinant)}.`,
       `Después se comprueba que el discriminante vale ${formatMatrixEntry(discriminant)} y es negativo.`,
-      `Eso produce el par complejo conjugado ${formatMatrixEntry(realPart)} ± ${formatMatrixEntry(imaginaryPart)} i.`,
+      `Eso produce el par complejo conjugado ${formatPlainExpression(symbolicParts.realPart)} ± ${formatPlainExpression(symbolicParts.imaginaryPart)} i.`,
       'Como estamos trabajando con matrices reales, no se deja la forma canónica en diagonal compleja.',
       'En su lugar se usa el bloque real equivalente, que recoge la misma rotación y la misma dilatación.',
     ],

@@ -3,7 +3,6 @@ import {
   formatMatrixEntry,
   inverse2,
   matrixFromImages,
-  multiplyMatrices,
   subtractVectors,
 } from './math2d'
 import type { Matrix2, Vec2 } from './math2d'
@@ -261,6 +260,8 @@ function inverseNarrativeBlocks(matrix: Matrix2, symbol: string) {
 type LinearCanonicalData = {
   symbolJ: string
   P: Matrix2
+  pTex: string
+  canonicalTex: string
   classificationBlocks: ReportBlock[]
   basisChangeBlocks: ReportBlock[]
 }
@@ -276,17 +277,21 @@ function buildLinearCanonicalData(matrix: Matrix2, trace: number, determinant: n
     const symbolicEigenvalues = symbolicDistinctRealEigenvalues(trace, discriminant)
     const symbolicV1 = symbolicDistinctRealEigenvector(matrix, symbolicEigenvalues.lambda1, lambda1)
     const symbolicV2 = symbolicDistinctRealEigenvector(matrix, symbolicEigenvalues.lambda2, lambda2)
+    const pTex = expressionMatrixTex([[symbolicV1[0], symbolicV2[0]], [symbolicV1[1], symbolicV2[1]]])
+    const canonicalTex = expressionMatrixTex([[symbolicEigenvalues.lambda1, symbolicNumber(0)], [symbolicNumber(0), symbolicEigenvalues.lambda2]])
 
     return {
       symbolJ: 'J',
       P,
+      pTex,
+      canonicalTex,
       classificationBlocks: [
         paragraph('Ahora miramos el discriminante del polinomio característico, porque su signo separa los tres escenarios básicos en dimensión dos.'),
         math(`\\Delta=\\operatorname{tr}(A)^2-4\\det(A)=(${formatTexNumber(trace)})^2-4(${formatTexNumber(determinant)})=${formatTexNumber(discriminant)}>0`),
         paragraph('Aquí sale positivo, así que el polinomio tiene dos raíces reales distintas y aparecen dos direcciones propias independientes.'),
         math(`\\lambda_1=\\frac{${formatTexNumber(trace)}+\\sqrt{${formatTexNumber(discriminant)}}}{2}=${formatLatexExpression(symbolicEigenvalues.lambda1)},\\qquad \\lambda_2=\\frac{${formatTexNumber(trace)}-\\sqrt{${formatTexNumber(discriminant)}}}{2}=${formatLatexExpression(symbolicEigenvalues.lambda2)}`),
         paragraph('Cuando eso ocurre, la matriz es diagonalizable y la forma canónica queda simplemente en diagonal, con cada autovalor ocupando su sitio.'),
-        math(`J=${expressionMatrixTex([[symbolicEigenvalues.lambda1, symbolicNumber(0)], [symbolicNumber(0), symbolicEigenvalues.lambda2]])}`),
+        math(`J=${canonicalTex}`),
       ],
       basisChangeBlocks: [
         paragraph('El siguiente paso es construir una base adaptada. Para cada autovalor resolvemos el sistema homogéneo correspondiente y elegimos un vector no nulo del núcleo.'),
@@ -295,7 +300,7 @@ function buildLinearCanonicalData(matrix: Matrix2, trace: number, determinant: n
         paragraph(`Para el segundo autovalor ${formatPlainExpression(symbolicEigenvalues.lambda2)}:`),
         math(`A-\\lambda_2 I=${expressionMatrixTex(symbolicMatrixMinusScalar(matrix, symbolicEigenvalues.lambda2))},\\qquad v_2=${expressionVectorTex(symbolicV2)}`),
         paragraph('Al colocar esos dos autovectores como columnas obtenemos la matriz de cambio de base que lleva A a la diagonal anterior.'),
-        math(`P=[\\,v_1\\ v_2\\,]=${expressionMatrixTex([[symbolicV1[0], symbolicV2[0]], [symbolicV1[1], symbolicV2[1]]])}`),
+        math(`P=[\\,v_1\\ v_2\\,]=${pTex}`),
       ],
     }
   }
@@ -304,18 +309,23 @@ function buildLinearCanonicalData(matrix: Matrix2, trace: number, determinant: n
     const lambda = trace / 2
 
     if (isScalarMatrix(matrix, lambda)) {
+      const pTex = matrixTex([[1, 0], [0, 1]])
+      const canonicalTex = matrixTex([[lambda, 0], [0, lambda]])
+
       return {
         symbolJ: 'J',
         P: [[1, 0], [0, 1]],
+        pTex,
+        canonicalTex,
         classificationBlocks: [
           paragraph('El discriminante se anula, de modo que sólo aparece un autovalor.'),
           math(`\\lambda=\\frac{\\operatorname{tr}(A)}{2}=${formatTexNumber(lambda)}`),
           paragraph('Además, al comparar A con lambda por la identidad vemos que no queda ninguna estructura extra por simplificar: todo vector no nulo es autovector y la matriz ya está en su forma canónica.'),
-          math(`J=${matrixTex([[lambda, 0], [0, lambda]])}`),
+          math(`J=${canonicalTex}`),
         ],
         basisChangeBlocks: [
           paragraph('Aquí no hace falta buscar una base especial. Cualquier base de R² sirve y, por comodidad, nos quedamos con la base canónica.'),
-          math(`P=I=${matrixTex([[1, 0], [0, 1]])}`),
+          math(`P=I=${pTex}`),
         ],
       }
     }
@@ -323,14 +333,19 @@ function buildLinearCanonicalData(matrix: Matrix2, trace: number, determinant: n
     const v1 = eigenvectorFor(matrix, lambda)
     const v2 = generalizedEigenvectorFor(matrix, lambda, v1)
     const P = matrixFromImages(v1, v2)
+    const pTex = matrixTex(P)
+    const canonicalTex = matrixTex([[lambda, 1], [0, lambda]])
 
     return {
+      symbolJ: 'J',
       P,
+      pTex,
+      canonicalTex,
       classificationBlocks: [
         paragraph('El discriminante vuelve a anularse, así que estamos ante un autovalor doble.'),
         math(`\\lambda=\\frac{\\operatorname{tr}(A)}{2}=${formatTexNumber(lambda)}`),
         paragraph('Sin embargo, A no coincide con lambda por la identidad, así que no aparecen dos direcciones propias independientes. En dimensión dos eso obliga a que la forma canónica tenga un único bloque de Jordan de tamaño dos.'),
-        math(`J=${matrixTex([[lambda, 1], [0, lambda]])}`),
+        math(`J=${canonicalTex}`),
       ],
       basisChangeBlocks: [
         paragraph('Primero buscamos un autovector resolviendo el sistema homogéneo asociado al autovalor doble.'),
@@ -338,7 +353,7 @@ function buildLinearCanonicalData(matrix: Matrix2, trace: number, determinant: n
         paragraph('Como un solo autovector no basta para completar la base, añadimos un vector generalizado que encaje con la cadena de Jordan.'),
         math(`(A-\\lambda I)v_2=v_1,\\qquad v_2=${vectorTex(v2)}`),
         paragraph('Con esos dos vectores en las columnas queda construida la matriz de cambio de base.'),
-        math(`P=[\\,v_1\\ v_2\\,]=${matrixTex(P)}`),
+        math(`P=[\\,v_1\\ v_2\\,]=${pTex}`),
       ],
     }
   }
@@ -349,23 +364,27 @@ function buildLinearCanonicalData(matrix: Matrix2, trace: number, determinant: n
   const P = matrixFromImages(v, u)
   const symbolicParts = symbolicComplexEigenParts(trace, discriminant)
   const symbolicBasis = symbolicComplexEigenBasis(matrix, symbolicParts.realPart, symbolicParts.imaginaryPart)
+  const pTex = expressionMatrixTex([[symbolicBasis.v[0], symbolicBasis.u[0]], [symbolicBasis.v[1], symbolicBasis.u[1]]])
+  const canonicalTex = expressionMatrixTex([[symbolicParts.realPart, negateExpression(symbolicParts.imaginaryPart)], [symbolicParts.imaginaryPart, symbolicParts.realPart]])
 
   return {
     symbolJ: 'J_{\\mathbb R}',
     P,
+    pTex,
+    canonicalTex,
     classificationBlocks: [
       paragraph('Si el discriminante sale negativo, el polinomio característico ya no tiene raíces reales.'),
       math(`\\Delta=${formatTexNumber(discriminant)}<0`),
       paragraph('En su lugar aparece un par complejo conjugado, que sigue describiendo por completo la dinámica lineal.'),
       math(`\\lambda_{\\pm}=${formatLatexExpression(symbolicParts.realPart)}\\pm ${formatLatexExpression(symbolicParts.imaginaryPart)}\\,i`),
       paragraph('Como estamos trabajando sobre los números reales, sustituimos la diagonal compleja por el bloque real equivalente, que representa la misma rotación-dilatación.'),
-      math(`J_{\\mathbb R}=${expressionMatrixTex([[symbolicParts.realPart, negateExpression(symbolicParts.imaginaryPart)], [symbolicParts.imaginaryPart, symbolicParts.realPart]])}`),
+      math(`J_{\\mathbb R}=${canonicalTex}`),
     ],
     basisChangeBlocks: [
       paragraph('Para construir la base real adecuada, se toma un autovector complejo z = u + iv asociado al autovalor con parte imaginaria positiva y se separa en sus partes real e imaginaria.'),
       math(`u=${expressionVectorTex(symbolicBasis.u)}\\quad\\text{(parte real)},\\qquad v=${expressionVectorTex(symbolicBasis.v)}\\quad\\text{(parte imaginaria)}`),
       paragraph('Al ordenar la base real como (v,u), la conjugación reproduce exactamente el bloque canónico real anterior.'),
-      math(`P=[\\,v\\ u\\,]=${expressionMatrixTex([[symbolicBasis.v[0], symbolicBasis.u[0]], [symbolicBasis.v[1], symbolicBasis.u[1]]])}`),
+      math(`P=[\\,v\\ u\\,]=${pTex}`),
     ],
   }
 }
@@ -423,7 +442,7 @@ export function buildLinearReportDocument(input: LinearReportInput): PrintableRe
   }
 
   const { basisMatrix, imageMatrix, matrix, basisDeterminant } = input.linearData
-  const { trace, determinant, discriminant, caseLabel, shortText, canonicalMatrix } = input.linearAnalysis
+  const { trace, determinant, discriminant, caseLabel, shortText } = input.linearAnalysis
   const inverseBasis = inverse2(basisMatrix)
 
   if (!inverseBasis) {
@@ -431,11 +450,6 @@ export function buildLinearReportDocument(input: LinearReportInput): PrintableRe
   }
 
   const canonicalData = buildLinearCanonicalData(matrix, trace, determinant, discriminant)
-  const inverseP = inverse2(canonicalData.P)
-  const verification = inverseP
-    ? multiplyMatrices(multiplyMatrices(inverseP, matrix), canonicalData.P)
-    : canonicalMatrix
-
   return {
     kind: 'linear',
     title: 'Informe detallado de la reducción lineal en R²',
@@ -445,7 +459,7 @@ export function buildLinearReportDocument(input: LinearReportInput): PrintableRe
     highlights: [
       textFact('Caso', caseLabel),
       mathFact('A', matrixTex(matrix), true),
-      mathFact(canonicalData.symbolJ, matrixTex(canonicalMatrix), true),
+      mathFact(canonicalData.symbolJ, canonicalData.canonicalTex, true),
       mathFact('\\det(B)', formatTexNumber(basisDeterminant)),
     ],
     sections: [
@@ -488,7 +502,7 @@ export function buildLinearReportDocument(input: LinearReportInput): PrintableRe
       section('verificacion', 'Paso 8', 'Verificación de la forma canónica', [
         paragraph('El último cálculo importante consiste en verificar que la base elegida era la correcta. Para eso invertimos P y comprobamos directamente la conjugación.'),
         ...inverseNarrativeBlocks(canonicalData.P, 'P'),
-        math(`P^{-1}AP=${matrixTex(verification)}=${matrixTex(canonicalMatrix)}=${canonicalData.symbolJ}`),
+        math(`P^{-1}AP=${canonicalData.canonicalTex}=${canonicalData.symbolJ}`),
       ], 'La identidad final confirma que la reducción está bien hecha y que la base adaptada funciona.'),
       section('resumen', 'Resumen', 'Resumen', [
         paragraph('Si se recorre todo el proceso de corrido, la historia del cálculo queda así:'),
@@ -504,8 +518,8 @@ export function buildLinearReportDocument(input: LinearReportInput): PrintableRe
     ],
     closingFacts: [
       mathFact('A', matrixTex(matrix), true),
-      mathFact('P', matrixTex(canonicalData.P), true),
-      mathFact(canonicalData.symbolJ, matrixTex(canonicalMatrix), true),
+      mathFact('P', canonicalData.pTex, true),
+      mathFact(canonicalData.symbolJ, canonicalData.canonicalTex, true),
     ],
   }
 }
@@ -646,82 +660,6 @@ export function buildAffineReportDocument(input: AffineReportInput): PrintableRe
   if (!inverseSource) {
     return invalidAffineDocument(input)
   }
-
-  const analysis = input.affineAnalysis
-  const linearPart = analysis.sourceLinearPart
-  const translation = analysis.sourceTranslation
-  return {
-    kind: 'affine',
-    title: 'Informe detallado de la clasificación afín en R²',
-    subtitle: '',
-    statusLabel: analysis.caseLabel,
-    generatedAt: createGeneratedAtLabel(),
-    highlights: [
-      textFact('Caso afín', analysis.caseLabel),
-      textFact('Conjunto fijo', analysis.fixedSet.label),
-      mathFact('A', matrixTex(linearPart), true),
-      mathFact('H_{\\mathrm{can}}', matrixTex(analysis.canonicalHomogeneous), true),
-    ],
-    sections: [
-      section('datos', 'Paso 1', 'Datos de partida', [
-        paragraph('Una aplicación afín en el plano queda determinada cuando se fijan tres puntos origen afínmente independientes y se indican sus imágenes. Ese será nuestro punto de partida.'),
-        facts([
-          mathFact('p0', vectorTex(input.affineSource.p0)),
-          mathFact('p1', vectorTex(input.affineSource.p1)),
-          mathFact('p2', vectorTex(input.affineSource.p2)),
-          mathFact('q0', vectorTex(input.affineImages.q0)),
-          mathFact('q1', vectorTex(input.affineImages.q1)),
-          mathFact('q2', vectorTex(input.affineImages.q2)),
-        ]),
-      ], 'Empezamos reuniendo los puntos origen y sus imágenes, que son los datos que fijan toda la aplicación.'),
-      section('independencia', 'Paso 2', 'Independencia afín del triángulo origen', [
-        paragraph('Para pasar del lenguaje de puntos al lenguaje vectorial, restamos p0. Así convertimos el problema afín en un problema lineal sobre el espacio asociado.'),
-        math(`p_1-p_0=${vectorTex(input.affineSource.p1)}-${vectorTex(input.affineSource.p0)}=${vectorTex(side1)}`),
-        math(`p_2-p_0=${vectorTex(input.affineSource.p2)}-${vectorTex(input.affineSource.p0)}=${vectorTex(side2)}`),
-        math(`(p_1-p_0)\\wedge(p_2-p_0)=\\begin{vmatrix}${formatTexNumber(side1.x)} & ${formatTexNumber(side2.x)}\\\\${formatTexNumber(side1.y)} & ${formatTexNumber(side2.y)}\\end{vmatrix}=${formatTexNumber(input.affineDraftArea)}`),
-        facts([
-          mathFact('Área doble', formatTexNumber(input.affineDraftArea)),
-          mathFact('Área geométrica', formatTexNumber(Math.abs(input.affineDraftArea) / 2)),
-          textFact('Conclusión', 'Los tres puntos origen forman una referencia afín válida'),
-        ]),
-      ], 'Este paso confirma que el triángulo origen no es degenerado y que, por tanto, la aplicación queda bien determinada.'),
-      section('reconstruccion', 'Paso 3', 'Reconstrucción de la parte lineal y de la traslación', [
-        paragraph('Con los vectores del triángulo origen y del triángulo imagen se reconstruye primero la parte lineal A. Después se recupera la traslación imponiendo que p0 se envíe exactamente a q0.'),
-        math(`S=[p_1-p_0\\ p_2-p_0]=${matrixTex(sourceFrame)},\\qquad T=[q_1-q_0\\ q_2-q_0]=${matrixTex(imageFrame)}`),
-        ...inverseNarrativeBlocks(sourceFrame, 'S'),
-        math(`A=TS^{-1}=${matrixTex(imageFrame)}\\cdot${matrixTex(inverseSource)}=${matrixTex(linearPart)}`),
-        math(`t=q_0-Ap_0=${vectorTex(input.affineImages.q0)}-${matrixTex(linearPart)}${vectorTex(input.affineSource.p0)}=${vectorTex(translation)}`),
-        math(`H_F=${matrixTex(analysis.sourceHomogeneous)}`),
-        paragraph('Al final de este paso ya tenemos tanto la expresión F(x)=Ax+t como su matriz homogénea, que resume la aplicación en un único bloque.'),
-      ], 'Aquí se reconstruye por completo la aplicación afín a partir de los datos geométricos.'),
-      section('clasificacion', 'Paso 4', 'Geometría afín: puntos fijos y caso normal', buildAffineClassificationBlocks(linearPart, translation, input), 'Con A y t ya calculados, ahora se decide si la traslación se puede absorber o si sobrevive en la forma normal.'),
-      section('normal', 'Paso 5', 'Representante canónico en la nueva referencia', [
-        paragraph('Una vez entendido el caso geométrico, escribimos la forma normal en una referencia adaptada. Esa es la versión más simple de la aplicación dentro de su clase afín.'),
-        facts([
-          mathFact('A_{\\mathrm{can}}', matrixTex(analysis.canonicalLinearPart), true),
-          mathFact('t_{\\mathrm{can}}', vectorTex(analysis.canonicalTranslation)),
-          textFact('Conjunto fijo canónico', analysis.canonicalFixedSet.label),
-          textFact('Lectura rápida', analysis.shortText),
-        ]),
-        math(`H_{\\mathrm{can}}=${matrixTex(analysis.canonicalHomogeneous)}`),
-        math(affineNormalMapTex(analysis.canonicalLinearPart, analysis.canonicalTranslation)),
-      ], 'Esta referencia adaptada concentra el caso en su forma más simple y fácil de comparar con otros ejemplos.'),
-      section('resumen', 'Resumen', 'Resumen', [
-        paragraph('Si se leen juntos los pasos anteriores, el proceso completo se resume así:'),
-        list(analysis.steps),
-      ], 'Este repaso final deja el hilo del ejemplo en pocas líneas y sin tecnicismos innecesarios.'),
-    ],
-    closingFacts: [
-      mathFact('A', matrixTex(linearPart), true),
-      mathFact('t', vectorTex(translation)),
-      mathFact('H_{\\mathrm{can}}', matrixTex(analysis.canonicalHomogeneous), true),
-    ],
-  }
-}
-
-export function formatVectorForDisplay(vector: Vec2) {
-  return `(${formatMatrixEntry(vector.x)}, ${formatMatrixEntry(vector.y)})`
-}  }
 
   const analysis = input.affineAnalysis
   const linearPart = analysis.sourceLinearPart
