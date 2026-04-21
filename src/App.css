@@ -25,6 +25,17 @@
     var(--panel);
 }
 
+.hero-title {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.hero-title .katex {
+  font-size: 1em;
+}
+
 .hero-copy {
   max-width: 28rem;
   margin: 0;
@@ -464,6 +475,10 @@
   .module-card {
     padding: 1.2rem;
     border-radius: 22px;
+  }
+
+  .hero-title {
+    align-items: flex-start;
   }
 
   .results-grid,

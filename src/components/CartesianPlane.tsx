@@ -150,6 +150,32 @@ function clipInfiniteLine(anchor: Vec2, direction: Vec2, minX: number, maxX: num
   return { start, end }
 }
 
+function niceGridStep(target: number) {
+  if (target <= 0 || !Number.isFinite(target)) {
+    return 1
+  }
+
+  const exponent = Math.floor(Math.log10(target))
+  const power = Math.pow(10, exponent)
+  const mantissa = target / power
+  const niceMantissa = mantissa < 1.5 ? 1 : mantissa < 3.5 ? 2 : mantissa < 7.5 ? 5 : 10
+  return niceMantissa * power
+}
+
+function collectTicks(minValue: number, maxValue: number, step: number) {
+  const ticks: number[] = []
+  if (step <= 0) {
+    return ticks
+  }
+
+  const tolerance = step * 1e-6
+  const first = Math.ceil((minValue - tolerance) / step) * step
+  for (let value = first; value <= maxValue + tolerance; value += step) {
+    ticks.push(Math.round(value / step) * step)
+  }
+  return ticks
+}
+
 function fitViewBounds(points: Vec2[], fallbackRange: number) {
   if (points.length === 0) {
     return { center: { x: 0, y: 0 }, halfRange: fallbackRange }
@@ -412,6 +438,25 @@ export function CartesianPlane({
     setHalfRange(fittedView.halfRange)
   }
 
+  const viewMinX = center.x - halfRange
+  const viewMaxX = center.x + halfRange
+  const viewMinY = center.y - halfRange
+  const viewMaxY = center.y + halfRange
+
+  const majorStep = niceGridStep((2 * halfRange) / 8)
+  const minorDivisor = Math.abs(majorStep / Math.pow(10, Math.floor(Math.log10(majorStep))) - 2) < 0.01 ? 4 : 5
+  const minorStep = majorStep / minorDivisor
+
+  const xMinorTicks = collectTicks(viewMinX, viewMaxX, minorStep)
+  const yMinorTicks = collectTicks(viewMinY, viewMaxY, minorStep)
+  const xMajorTicks = collectTicks(viewMinX, viewMaxX, majorStep)
+  const yMajorTicks = collectTicks(viewMinY, viewMaxY, majorStep)
+
+  const axisXScreen = worldToScreen({ x: 0, y: 0 }).x
+  const axisYScreen = worldToScreen({ x: 0, y: 0 }).y
+  const showYAxis = viewMinX <= 0 && 0 <= viewMaxX
+  const showXAxis = viewMinY <= 0 && 0 <= viewMaxY
+
   return (
     <section className="plane-card">
       <div className="plane-header">
@@ -447,22 +492,84 @@ export function CartesianPlane({
           role="img"
           aria-label={title}
         >
-        {Array.from({ length: Math.ceil(halfRange) * 4 + 1 }, (_, index) => index - Math.ceil(halfRange) * 2).map((step) => {
-          const tick = step / 2
-          const vertical = worldToScreen({ x: tick, y: 0 }).x
-          const horizontal = worldToScreen({ x: 0, y: tick }).y
-
-          if (vertical < 0 || vertical > size || horizontal < 0 || horizontal > size) {
-            return null
-          }
-
-          return (
-            <g key={tick}>
-              <line x1={vertical} y1={0} x2={vertical} y2={size} stroke="rgba(40, 53, 70, 0.08)" strokeWidth={tick === 0 ? 2 : Number.isInteger(tick) ? 1 : 0.6} />
-              <line x1={0} y1={horizontal} x2={size} y2={horizontal} stroke="rgba(40, 53, 70, 0.08)" strokeWidth={tick === 0 ? 2 : Number.isInteger(tick) ? 1 : 0.6} />
-            </g>
-          )
-        })}
+        <g pointerEvents="none">
+          {xMinorTicks.map((value) => {
+            const sx = worldToScreen({ x: value, y: 0 }).x
+            return (
+              <line
+                key={`xm-${value}`}
+                x1={sx}
+                y1={0}
+                x2={sx}
+                y2={size}
+                stroke="rgba(40, 53, 70, 0.06)"
+                strokeWidth={0.6}
+              />
+            )
+          })}
+          {yMinorTicks.map((value) => {
+            const sy = worldToScreen({ x: 0, y: value }).y
+            return (
+              <line
+                key={`ym-${value}`}
+                x1={0}
+                y1={sy}
+                x2={size}
+                y2={sy}
+                stroke="rgba(40, 53, 70, 0.06)"
+                strokeWidth={0.6}
+              />
+            )
+          })}
+          {xMajorTicks.map((value) => {
+            const sx = worldToScreen({ x: value, y: 0 }).x
+            return (
+              <line
+                key={`xM-${value}`}
+                x1={sx}
+                y1={0}
+                x2={sx}
+                y2={size}
+                stroke="rgba(40, 53, 70, 0.14)"
+                strokeWidth={1}
+              />
+            )
+          })}
+          {yMajorTicks.map((value) => {
+            const sy = worldToScreen({ x: 0, y: value }).y
+            return (
+              <line
+                key={`yM-${value}`}
+                x1={0}
+                y1={sy}
+                x2={size}
+                y2={sy}
+                stroke="rgba(40, 53, 70, 0.14)"
+                strokeWidth={1}
+              />
+            )
+          })}
+          {showYAxis && (
+            <line
+              x1={axisXScreen}
+              y1={0}
+              x2={axisXScreen}
+              y2={size}
+              stroke="rgba(40, 53, 70, 0.55)"
+              strokeWidth={1.6}
+            />
+          )}
+          {showXAxis && (
+            <line
+              x1={0}
+              y1={axisYScreen}
+              x2={size}
+              y2={axisYScreen}
+              stroke="rgba(40, 53, 70, 0.55)"
+              strokeWidth={1.6}
+            />
+          )}
+        </g>
 
         {polygons.map((polygon) => (
           <polygon

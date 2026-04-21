@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import katex from 'katex'
+import 'katex/dist/katex.min.css'
 import './App.css'
 import { CartesianPlane } from './components/CartesianPlane'
 import {
@@ -35,6 +37,15 @@ const initialAffineImages: Record<'q0' | 'q1' | 'q2', Vec2> = {
 }
 
 type TabId = 'lineal' | 'afin'
+
+function renderMath(tex: string) {
+  return {
+    __html: katex.renderToString(tex, {
+      throwOnError: false,
+      strict: 'ignore',
+    }),
+  }
+}
 
 function MatrixBlock({ title, rows }: { title: string; rows: number[][] }) {
   return (
@@ -343,7 +354,10 @@ function App() {
     <main className="app-shell">
       <header className="hero-panel">
         <div>
-          <h1>Linear Algebra</h1>
+          <h1 className="hero-title">
+            <span>Transformaciones de</span>{' '}
+            <span aria-label="R cuadrado" dangerouslySetInnerHTML={renderMath('\\mathbb{R}^2')} />
+          </h1>
         </div>
       </header>
 
