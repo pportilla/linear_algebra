@@ -600,8 +600,8 @@ export function canonicalizeAffineMap(
     const basis = generalizedJordanBasisForOne(linearPart)
     const inverseBasis = inverse2(basis)
     const translationInBasis = inverseBasis ? applyMatrix(inverseBasis, translation) : { x: 0, y: 1 }
-    const canonicalTranslation = almostEqual(translationInBasis.y, 0) ? { x: 0, y: 0 } : { x: 1, y: 0 }
-    const canonicalLinearPart: Matrix2 = [[1, 0], [1, 1]]
+    const canonicalTranslation = almostEqual(translationInBasis.y, 0) ? { x: 0, y: 0 } : { x: 0, y: 1 }
+    const canonicalLinearPart: Matrix2 = [[1, 1], [0, 1]]
 
     return {
       sourceLinearPart: linearPart,
@@ -614,7 +614,7 @@ export function canonicalizeAffineMap(
       canonicalFixedSet: classifyAffineFixedSet(canonicalLinearPart, canonicalTranslation),
       caseLabel: 'Caso parabólico sin punto fijo',
       shortText: 'Aparece un bloque de Jordan para el autovalor 1 y una traslación transversal que no se puede eliminar.',
-      canvasSubtitle: 'La forma normal afín se representa como (x, y) ↦ (x + 1, x + y).',
+      canvasSubtitle: 'La forma normal afín se representa como (x, y) ↦ (x + y, y + 1).',
       steps: [
         'La parte lineal tiene el autovalor 1, pero aparece con un bloque de Jordan no trivial.',
         'Como no hay punto fijo, sobrevive una componente afín esencial.',

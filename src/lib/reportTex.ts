@@ -635,7 +635,7 @@ function buildAffineCaseParabolic(linearPart: Matrix2, translation: Vec2) {
   const s = invP ? applyMatrix(invP, translation) : { x: 0, y: 1 }
   const newOrigin = { x: -s.x * v2.x, y: -s.x * v2.y }
   const scaledV1 = { x: s.y * v1.x, y: s.y * v1.y }
-  const canonical: Matrix2 = [[1, 0], [1, 1]]
+  const canonical: Matrix2 = [[1, 1], [0, 1]]
 
   return `
 \\subsection*{Paso 7. Ausencia de punto fijo}
@@ -672,11 +672,6 @@ Se reescala la segunda coordenada con $w_2=z_2/s_2$. Para respetar la forma del 
 \\[
 (w_1,w_2)\\longmapsto (w_1+w_2,\\ w_2+1).
 \\]
-Si ahora intercambiamos coordenadas con $u_1=w_2$ y $u_2=w_1$, la misma dinámica queda escrita como
-\\[
-(u_1,u_2)\\longmapsto (u_1+1,\\ u_1+u_2),
-\\]
-que deja la traslación normalizada en la primera coordenada.
 
 \\subsection*{Paso 11. Referencia afín adaptada}
 \\[
@@ -684,7 +679,7 @@ que deja la traslación normalizada en la primera coordenada.
 \\]
 Matriz homogénea de la forma normal afín:
 \\[
-H_{\\mathrm{can}}=${matrixToLatex3x3(homogeneousFromAffine(canonical, { x: 1, y: 0 }))}.
+H_{\\mathrm{can}}=${matrixToLatex3x3(homogeneousFromAffine(canonical, { x: 0, y: 1 }))}.
 \\]
 `
 }
