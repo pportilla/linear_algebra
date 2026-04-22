@@ -213,7 +213,7 @@ function App() {
 
     if (!hasServerPdfExport) {
       try {
-        openLinearPrintableReport({ linearPoints, linearData, linearAnalysis })
+        await openLinearPrintableReport({ linearPoints, linearData, linearAnalysis })
         setLinearPdfStatus('idle')
         setLinearPdfMessage('')
       } catch (error) {
@@ -265,7 +265,7 @@ function App() {
 
     if (!hasServerPdfExport) {
       try {
-        openAffinePrintableReport({
+        await openAffinePrintableReport({
           affineSource,
           affineImages,
           affineDraftValid,

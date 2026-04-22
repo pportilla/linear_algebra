@@ -554,14 +554,14 @@ function invalidAffineDocument(input: AffineReportInput): PrintableReportDocumen
         ]),
       ]),
       section('independencia', 'Diagnóstico', 'Fallo de independencia afín', [
-        paragraph('La clasificación afín empieza comprobando que p0, p1 y p2 no estén alineados. Dicho de otro modo, los vectores p1 - p0 y p2 - p0 tienen que generar realmente el plano.'),
+        paragraph('La clasificación afín empieza comprobando que p0, p1 y p2 no estén alineados. Equivalentemente, los vectores p1 - p0 y p2 - p0 deben ser linealmente independientes en el espacio de direcciones.'),
         math(`p_1-p_0=${vectorTex(input.affineSource.p1)}-${vectorTex(input.affineSource.p0)}=${vectorTex(side1)}`),
         math(`p_2-p_0=${vectorTex(input.affineSource.p2)}-${vectorTex(input.affineSource.p0)}=${vectorTex(side2)}`),
         math(`(p_1-p_0)\\wedge(p_2-p_0)=\\begin{vmatrix}${formatTexNumber(side1.x)} & ${formatTexNumber(side2.x)}\\\\${formatTexNumber(side1.y)} & ${formatTexNumber(side2.y)}\\end{vmatrix}=${formatTexNumber(input.affineDraftArea)}`),
         note('El área orientada doble es nula o demasiado pequeña, así que la referencia afín origen es degenerada.', 'warning'),
       ]),
       section('ajuste', 'Siguiente paso', 'Cómo corregirlo', [
-        paragraph('En cuanto el triángulo origen deje de ser degenerado, el resto del proceso vuelve a funcionar con normalidad.'),
+        paragraph('En cuanto el triángulo origen deje de ser degenerado, la terna (p0,p1,p2) vuelve a definir una referencia afín y el resto del proceso se recupera sin cambios.'),
         list([
           'Mueve cualquiera de los tres puntos origen hasta que dejen de estar alineados.',
           'Comprueba que el área orientada doble del triángulo origen sea distinta de cero.',
@@ -594,7 +594,7 @@ function buildAffineClassificationBlocks(
   const system = matrixMinusScalar(linearPart, 1)
   const rhs = { x: -translation.x, y: -translation.y }
   const blocks: ReportBlock[] = [
-    paragraph('Con la parte lineal y la traslación ya reconstruidas, ahora toca decidir si la traslación puede absorberse cambiando el origen. Todo se resume en estudiar la ecuación de los puntos fijos.'),
+    paragraph('Con la descomposición afín F(x)=Ax+t ya reconstruida, toca decidir si el término de traslación puede absorberse mediante un cambio de origen. El criterio es estudiar la ecuación de puntos fijos.'),
     facts([
       textFact('Caso afín', analysis.caseLabel),
       textFact('Conjunto fijo', analysis.fixedSet.label),
@@ -605,13 +605,13 @@ function buildAffineClassificationBlocks(
   ]
 
   if (analysis.fixedSet.kind === 'point' && analysis.fixedSet.point) {
-    blocks.push(paragraph('El sistema tiene una solución única, así que existe un punto fijo concreto. Al mover el origen a ese punto, la traslación desaparece y el problema afín se reduce a la parte lineal.'))
+    blocks.push(paragraph('El sistema tiene solución única, así que existe un punto fijo. Al trasladar el origen a ese punto, el término independiente desaparece y la aplicación queda descrita sólo por su parte lineal.'))
     blocks.push(math(`c=${vectorTex(analysis.fixedSet.point)}`))
     return blocks
   }
 
   if (analysis.fixedSet.kind === 'line' && analysis.fixedSet.anchor && analysis.fixedSet.direction) {
-    blocks.push(paragraph('El sistema es compatible indeterminado. Eso significa que no hay un único punto fijo, sino una recta afín completa de puntos fijos.'))
+    blocks.push(paragraph('El sistema es compatible indeterminado. No aparece un único punto fijo, sino una recta afín completa de puntos fijos.'))
     blocks.push(
       math(`c=${vectorTex(analysis.fixedSet.anchor)}+s\\,${vectorTex(analysis.fixedSet.direction)}`),
     )
@@ -619,24 +619,24 @@ function buildAffineClassificationBlocks(
   }
 
   if (analysis.fixedSet.kind === 'plane') {
-    blocks.push(paragraph('La ecuación queda satisfecha para cualquier punto del plano, así que la aplicación coincide con la identidad afín. En este caso no hay nada que absorber: todo punto es fijo desde el principio.'))
+    blocks.push(paragraph('La ecuación se satisface para cualquier punto del plano: la aplicación coincide con la identidad afín y todo punto es fijo.'))
     return blocks
   }
 
-  blocks.push(paragraph('Aquí el sistema no tiene solución, de modo que la traslación no se puede absorber por completo. Por eso aparece un fenómeno afín esencial que sobrevive en la forma normal.'))
+  blocks.push(paragraph('Aquí el sistema no tiene solución, de modo que la traslación no puede eliminarse por cambio de origen. Queda, por tanto, un componente afín esencial en la forma normal.'))
 
   if (analysis.caseLabel === 'Traslación no trivial') {
-    blocks.push(paragraph('La parte lineal ya es la identidad, así que toda la información geométrica está concentrada en el vector de traslación. El objetivo será escoger una referencia en la que ese vector quede lo más simple posible.'))
+    blocks.push(paragraph('La parte lineal es la identidad, así que toda la información geométrica queda en el vector de traslación. Se elige una referencia afín donde ese vector adopte su forma normalizada.'))
     return blocks
   }
 
   if (analysis.caseLabel === 'Sin punto fijo y con un autovalor igual a 1') {
-    blocks.push(paragraph('En una base propia adaptada, la parte esencial de la traslación sobrevive justo en la dirección del autovalor 1. Después se reescala esa dirección para normalizarla a una unidad.'))
+    blocks.push(paragraph('En una base propia adaptada, la parte esencial de la traslación sobrevive en la dirección asociada al autovalor 1. Después se normaliza esa coordenada a una unidad.'))
     return blocks
   }
 
   if (analysis.caseLabel === 'Caso parabólico sin punto fijo') {
-    blocks.push(paragraph('El bloque de Jordan del autovalor 1 deja una traslación transversal que no puede eliminarse. Tras elegir bien la base y normalizar esa componente, aparece la forma parabólica estándar.'))
+    blocks.push(paragraph('El bloque de Jordan del autovalor 1 deja una traslación esencial que no puede eliminarse. Tras elegir una base de Jordan y normalizar esa componente, aparece la forma parabólica estándar.'))
     return blocks
   }
 
@@ -678,7 +678,7 @@ export function buildAffineReportDocument(input: AffineReportInput): PrintableRe
     ],
     sections: [
       section('datos', 'Paso 1', 'Datos de partida', [
-        paragraph('Una aplicación afín en el plano queda determinada cuando se fijan tres puntos origen afínmente independientes y se indican sus imágenes. Ese será nuestro punto de partida.'),
+        paragraph('En dimensión 2, una aplicación afín queda determinada por la imagen de una referencia afín: tres puntos afínmente independientes y sus imágenes.'),
         facts([
           mathFact('p0', vectorTex(input.affineSource.p0)),
           mathFact('p1', vectorTex(input.affineSource.p1)),
@@ -689,7 +689,7 @@ export function buildAffineReportDocument(input: AffineReportInput): PrintableRe
         ]),
       ], 'Empezamos reuniendo los puntos origen y sus imágenes, que son los datos que fijan toda la aplicación.'),
       section('independencia', 'Paso 2', 'Independencia afín del triángulo origen', [
-        paragraph('Para pasar del lenguaje de puntos al lenguaje vectorial, restamos p0. Así convertimos el problema afín en un problema lineal sobre el espacio asociado.'),
+        paragraph('Para pasar de puntos a direcciones, restamos p0. Así formulamos el problema en el espacio de direcciones mediante los vectores p1-p0 y p2-p0.'),
         math(`p_1-p_0=${vectorTex(input.affineSource.p1)}-${vectorTex(input.affineSource.p0)}=${vectorTex(side1)}`),
         math(`p_2-p_0=${vectorTex(input.affineSource.p2)}-${vectorTex(input.affineSource.p0)}=${vectorTex(side2)}`),
         math(`(p_1-p_0)\\wedge(p_2-p_0)=\\begin{vmatrix}${formatTexNumber(side1.x)} & ${formatTexNumber(side2.x)}\\\\${formatTexNumber(side1.y)} & ${formatTexNumber(side2.y)}\\end{vmatrix}=${formatTexNumber(input.affineDraftArea)}`),
@@ -700,17 +700,17 @@ export function buildAffineReportDocument(input: AffineReportInput): PrintableRe
         ]),
       ], 'Este paso confirma que el triángulo origen no es degenerado y que, por tanto, la aplicación queda bien determinada.'),
       section('reconstruccion', 'Paso 3', 'Reconstrucción de la parte lineal y de la traslación', [
-        paragraph('Con los vectores del triángulo origen y del triángulo imagen se reconstruye primero la parte lineal A. Después se recupera la traslación imponiendo que p0 se envíe exactamente a q0.'),
+        paragraph('Con las direcciones del triángulo origen y del triángulo imagen se reconstruye primero la parte lineal A. Luego se obtiene la traslación imponiendo F(p0)=q0, es decir, la descomposición F(x)=Ax+t.'),
         math(`S=[p_1-p_0\\ p_2-p_0]=${matrixTex(sourceFrame)},\\qquad T=[q_1-q_0\\ q_2-q_0]=${matrixTex(imageFrame)}`),
         ...inverseNarrativeBlocks(sourceFrame, 'S'),
         math(`A=TS^{-1}=${matrixTex(imageFrame)}\\cdot${matrixTex(inverseSource)}=${matrixTex(linearPart)}`),
         math(`t=q_0-Ap_0=${vectorTex(input.affineImages.q0)}-${matrixTex(linearPart)}${vectorTex(input.affineSource.p0)}=${vectorTex(translation)}`),
         math(`H_F=${matrixTex(analysis.sourceHomogeneous)}`),
-        paragraph('Al final de este paso ya tenemos tanto la expresión F(x)=Ax+t como su matriz homogénea, que resume la aplicación en un único bloque.'),
+        paragraph('Al final de este paso queda determinada la descomposición afín y su matriz homogénea, que codifica en un único bloque la parte lineal y el término independiente.'),
       ], 'Aquí se reconstruye por completo la aplicación afín a partir de los datos geométricos.'),
       section('clasificacion', 'Paso 4', 'Geometría afín: puntos fijos y caso normal', buildAffineClassificationBlocks(linearPart, translation, input), 'Con A y t ya calculados, ahora se decide si la traslación se puede absorber o si sobrevive en la forma normal.'),
       section('normal', 'Paso 5', 'Representante canónico en la nueva referencia', [
-        paragraph('Una vez entendido el caso geométrico, escribimos la forma normal en una referencia adaptada. Esa es la versión más simple de la aplicación dentro de su clase afín.'),
+        paragraph('Una vez identificado el caso geométrico, escribimos la forma normal en una referencia afín adaptada. Es el representante canónico dentro de su clase por conjugación afín.'),
         facts([
           mathFact('A_{\\mathrm{can}}', matrixTex(analysis.canonicalLinearPart), true),
           mathFact('t_{\\mathrm{can}}', vectorTex(analysis.canonicalTranslation)),
@@ -719,7 +719,7 @@ export function buildAffineReportDocument(input: AffineReportInput): PrintableRe
         ]),
         math(`H_{\\mathrm{can}}=${matrixTex(analysis.canonicalHomogeneous)}`),
         math(affineNormalMapTex(analysis.canonicalLinearPart, analysis.canonicalTranslation)),
-      ], 'Esta referencia adaptada concentra el caso en su forma más simple y fácil de comparar con otros ejemplos.'),
+      ], 'La referencia adaptada concentra el comportamiento esencial y facilita la comparación con otros ejemplos de la misma clase.'),
       section('resumen', 'Resumen', 'Resumen', [
         paragraph('Si se leen juntos los pasos anteriores, el proceso completo se resume así:'),
         list(analysis.steps),

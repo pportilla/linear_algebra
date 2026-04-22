@@ -635,7 +635,7 @@ function buildAffineCaseParabolic(linearPart: Matrix2, translation: Vec2) {
   const s = invP ? applyMatrix(invP, translation) : { x: 0, y: 1 }
   const newOrigin = { x: -s.x * v2.x, y: -s.x * v2.y }
   const scaledV1 = { x: s.y * v1.x, y: s.y * v1.y }
-  const canonical: Matrix2 = [[1, 1], [0, 1]]
+  const canonical: Matrix2 = [[1, 0], [1, 1]]
 
   return `
 \\subsection*{Paso 7. Ausencia de punto fijo}
@@ -672,6 +672,11 @@ Se reescala la segunda coordenada con $w_2=z_2/s_2$. Para respetar la forma del 
 \\[
 (w_1,w_2)\\longmapsto (w_1+w_2,\\ w_2+1).
 \\]
+Si ahora intercambiamos coordenadas con $u_1=w_2$ y $u_2=w_1$, la misma dinámica queda escrita como
+\\[
+(u_1,u_2)\\longmapsto (u_1+1,\\ u_1+u_2),
+\\]
+que deja la traslación normalizada en la primera coordenada.
 
 \\subsection*{Paso 11. Referencia afín adaptada}
 \\[
@@ -679,7 +684,7 @@ Se reescala la segunda coordenada con $w_2=z_2/s_2$. Para respetar la forma del 
 \\]
 Matriz homogénea de la forma normal afín:
 \\[
-H_{\\mathrm{can}}=${matrixToLatex3x3(homogeneousFromAffine(canonical, { x: 0, y: 1 }))}.
+H_{\\mathrm{can}}=${matrixToLatex3x3(homogeneousFromAffine(canonical, { x: 1, y: 0 }))}.
 \\]
 `
 }
@@ -1019,6 +1024,7 @@ q_2=${vecToLatex(payload.image.q2)}.
 ${buildAreaCalculationLatex(payload.source.p0, payload.source.p1, payload.source.p2, area)}
 
 \\subsection*{Paso 3. Vectores asociados a los puntos origen y a sus imágenes}
+Restamos el punto base en origen e imagen para pasar al espacio de direcciones y reconstruir la parte lineal:
 \\[
 S=[p_1-p_0\\ \\ p_2-p_0]=${matrixToLatex(sourceFrame)},
 \\qquad
@@ -1033,13 +1039,17 @@ A=TS^{-1}=${matrixToLatex(imageFrame)}\\cdot${matrixToLatex(inverseSource)}=${ma
 \\]
 
 \\subsection*{Paso 5. Traslación $t=q_0-Ap_0$}
-Imponiendo $F(p_0)=q_0$,
+Con la parte lineal ya fijada, imponemos $F(p_0)=q_0$ para obtener el término independiente:
 \\[
 t=q_0-Ap_0=${vecToLatex(payload.image.q0)}-${matrixToLatex(linearPart)}${vecToLatex(payload.source.p0)}=${vecToLatex(translation)}.
 \\]
-Por tanto, $F(x)=Ax+t$.
+Por tanto, la descomposición afín queda
+\\[
+F(x)=Ax+t.
+\\]
 
 \\subsection*{Paso 6. Matriz homogénea}
+En coordenadas homogéneas, la aplicación queda representada por
 \\[
 H_F=${matrixToLatex3x3(homogeneous)}.
 \\]

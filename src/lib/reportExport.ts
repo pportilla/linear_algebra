@@ -1,5 +1,3 @@
-import { buildAffineReportDocument, buildLinearReportDocument } from './reportContent'
-import { buildAffineTex, buildLinearTex } from './reportTex'
 import type {
   AffineReportInput,
   LinearReportInput,
@@ -129,33 +127,41 @@ function withTexDownload(document: PrintableReportDocument, texDownload?: Report
   return { ...document, texDownload }
 }
 
-export function openLinearPrintableReport(input: LinearReportInput) {
+export async function openLinearPrintableReport(input: LinearReportInput) {
+  const { buildLinearReportDocument } = await import('./reportContent')
   const document = buildLinearReportDocument(input)
   const texDownload =
     input.linearData && input.linearAnalysis
-      ? {
+      ? await (async () => {
+          const { buildLinearTex } = await import('./reportTex')
+          return {
           filename: 'forma-jordan-r2-detallada.tex',
           content: buildLinearTex({
             basis: { b1: input.linearPoints.b1, b2: input.linearPoints.b2 },
             imageBasis: { tb1: input.linearPoints.tb1, tb2: input.linearPoints.tb2 },
           }),
-        }
+          }
+        })()
       : undefined
 
   openReportPage(withTexDownload(document, texDownload))
 }
 
-export function openAffinePrintableReport(input: AffineReportInput) {
+export async function openAffinePrintableReport(input: AffineReportInput) {
+  const { buildAffineReportDocument } = await import('./reportContent')
   const document = buildAffineReportDocument(input)
   const texDownload =
     input.affineDraftValid && input.affineAnalysis
-      ? {
+      ? await (async () => {
+          const { buildAffineTex } = await import('./reportTex')
+          return {
           filename: 'forma-normal-afin-detallada.tex',
           content: buildAffineTex({
             source: input.affineSource,
             image: input.affineImages,
           }),
-        }
+          }
+        })()
       : undefined
 
   openReportPage(withTexDownload(document, texDownload))
