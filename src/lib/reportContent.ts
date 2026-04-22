@@ -330,11 +330,11 @@ function buildLinearCanonicalData(matrix: Matrix2, trace: number, determinant: n
       }
     }
 
-    const v1 = eigenvectorFor(matrix, lambda)
-    const v2 = generalizedEigenvectorFor(matrix, lambda, v1)
-    const P = matrixFromImages(v1, v2)
+    const eigen = eigenvectorFor(matrix, lambda)
+    const generalized = generalizedEigenvectorFor(matrix, lambda, eigen)
+    const P = matrixFromImages(generalized, eigen)
     const pTex = matrixTex(P)
-    const canonicalTex = matrixTex([[lambda, 1], [0, lambda]])
+    const canonicalTex = matrixTex([[lambda, 0], [1, lambda]])
 
     return {
       symbolJ: 'J',
@@ -349,11 +349,11 @@ function buildLinearCanonicalData(matrix: Matrix2, trace: number, determinant: n
       ],
       basisChangeBlocks: [
         paragraph('Primero buscamos un autovector resolviendo el sistema homogéneo asociado al autovalor doble.'),
-        math(`A-\\lambda I=${matrixTex(matrixMinusScalar(matrix, lambda))},\\qquad v_1=${vectorTex(v1)}`),
+        math(`A-\\lambda I=${matrixTex(matrixMinusScalar(matrix, lambda))},\\qquad v=${vectorTex(eigen)}`),
         paragraph('Como un solo autovector no basta para completar la base, añadimos un vector generalizado que encaje con la cadena de Jordan.'),
-        math(`(A-\\lambda I)v_2=v_1,\\qquad v_2=${vectorTex(v2)}`),
-        paragraph('Con esos dos vectores en las columnas queda construida la matriz de cambio de base.'),
-        math(`P=[\\,v_1\\ v_2\\,]=${pTex}`),
+        math(`(A-\\lambda I)w=v,\\qquad w=${vectorTex(generalized)}`),
+        paragraph('Para obtener el bloque de Jordan en la convención usada en las notas, ordenamos la base como (w,v).'),
+        math(`P=[\\,w\\ v\\,]=${pTex}`),
       ],
     }
   }

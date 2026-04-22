@@ -236,8 +236,8 @@ function classifyLinear(matrix: Matrix2): LinearTexAnalysis {
     return {
       caseId: 'jordan-block',
       canonicalMatrix: [
-        [lambda, 1],
-        [0, lambda],
+        [lambda, 0],
+        [1, lambda],
       ],
       trace,
       determinant,
@@ -430,24 +430,24 @@ J=${matrixToLatex(analysis.canonicalMatrix)}.
   }
 
   if (analysis.caseId === 'jordan-block') {
-    const v1 = eigenvectorFor(matrix, analysis.lambda)
-    const v2 = generalizedEigenvectorFor(matrix, analysis.lambda, v1)
-    const P = matrixFromImages(v1, v2)
+    const eigen = eigenvectorFor(matrix, analysis.lambda)
+    const generalized = generalizedEigenvectorFor(matrix, analysis.lambda, eigen)
+    const P = matrixFromImages(generalized, eigen)
     return {
-      v1,
-      v2,
+      v1: generalized,
+      v2: eigen,
       P,
       canonical: analysis.canonicalMatrix,
       body: `
 Estamos en el caso del autovalor doble $\\lambda=${formatNumber(analysis.lambda)}$ con un único bloque de Jordan. Primero calculamos un autovector resolviendo $(A-\\lambda I)\\,v=0$:
 \\[
-A-\\lambda I=${matrixToLatex(matrixMinusScalar(matrix, analysis.lambda))}\\ \\implies\\ v_1=${vecToLatex(v1)}.
+A-\\lambda I=${matrixToLatex(matrixMinusScalar(matrix, analysis.lambda))}\\ \\implies\\ v=${vecToLatex(eigen)}.
 \\]
-Necesitamos además un vector generalizado $v_2$ que satisfaga $(A-\\lambda I)\\,v_2=v_1$. Elegimos
+Necesitamos además un vector generalizado $w$ que satisfaga $(A-\\lambda I)\\,w=v$. Elegimos
 \\[
-v_2=${vecToLatex(v2)}.
+w=${vecToLatex(generalized)}.
 \\]
-Con estos dos vectores formamos $P=[\\,v_1\\ v_2\\,]=${matrixToLatex(P)}$, y obtenemos
+Ordenando la base como $(w,v)$, obtenemos $P=[\\,w\\ v\\,]=${matrixToLatex(P)}$, y en esa base la forma canónica queda
 \\[
 J=${matrixToLatex(analysis.canonicalMatrix)}.
 \\]
@@ -635,7 +635,7 @@ function buildAffineCaseParabolic(linearPart: Matrix2, translation: Vec2) {
   const s = invP ? applyMatrix(invP, translation) : { x: 0, y: 1 }
   const newOrigin = { x: -s.x * v2.x, y: -s.x * v2.y }
   const scaledV1 = { x: s.y * v1.x, y: s.y * v1.y }
-  const canonical: Matrix2 = [[1, 1], [0, 1]]
+  const canonical: Matrix2 = [[1, 0], [1, 1]]
 
   return `
 \\subsection*{Paso 7. Ausencia de punto fijo}
@@ -648,7 +648,7 @@ v_1=${vecToLatex(v1)}\\ \\text{(autovector)},
 \\qquad
 v_2=${vecToLatex(v2)}\\ \\text{con }(A-I)v_2=v_1.
 \\]
-Con $P=[v_1\\ v_2]=${matrixToLatex(P)}$, $A$ se conjuga al bloque de Jordan $J=${matrixToLatex([[1, 1], [0, 1]])}$. La traslación en estas coordenadas es
+Con $P=[v_1\\ v_2]=${matrixToLatex(P)}$, $A$ queda en forma de Jordan. La traslación en estas coordenadas es
 \\[
 s=P^{-1}t=${vecToLatex(s)}=(s_1,s_2).
 \\]
@@ -672,6 +672,11 @@ Se reescala la segunda coordenada con $w_2=z_2/s_2$. Para respetar la forma del 
 \\[
 (w_1,w_2)\\longmapsto (w_1+w_2,\\ w_2+1).
 \\]
+Si ahora intercambiamos coordenadas con $u_1=w_2$ y $u_2=w_1$, la misma dinámica queda escrita como
+\\[
+(u_1,u_2)\\longmapsto (u_1+1,\\ u_1+u_2),
+\\]
+que es la convención usada en las notas para el bloque de Jordan y la traslación residual.
 
 \\subsection*{Paso 11. Referencia afín adaptada}
 \\[
@@ -679,7 +684,7 @@ Se reescala la segunda coordenada con $w_2=z_2/s_2$. Para respetar la forma del 
 \\]
 Matriz homogénea de la forma normal afín:
 \\[
-H_{\\mathrm{can}}=${matrixToLatex3x3(homogeneousFromAffine(canonical, { x: 0, y: 1 }))}.
+H_{\\mathrm{can}}=${matrixToLatex3x3(homogeneousFromAffine(canonical, { x: 1, y: 0 }))}.
 \\]
 `
 }
@@ -804,15 +809,15 @@ Primero calculamos un autovector resolviendo $(A-\\lambda I)\\,v=0$:
 \\[
 A-\\lambda I=${matrixToLatex(matrixMinusScalar(matrix, analysis.lambda))}
 \\quad\\implies\\quad
-v_1=${vecToLatex(canonical.v1)}.
+v=${vecToLatex(canonical.v2)}.
 \\]
-A continuación necesitamos un vector generalizado $v_2$ que satisfaga $(A-\\lambda I)\\,v_2=v_1$. Basta con usar una fila no trivial del sistema. Obtenemos
+A continuación necesitamos un vector generalizado $w$ que satisfaga $(A-\\lambda I)\\,w=v$. Basta con usar una fila no trivial del sistema. Obtenemos
 \\[
-v_2=${vecToLatex(canonical.v2)}.
+w=${vecToLatex(canonical.v1)}.
 \\]
-Con estos dos vectores en las columnas se obtiene la matriz de cambio de base:
+Ordenando la base como $(w,v)$ en la convención de las notas, se obtiene la matriz de cambio de base:
 \\[
-P=[\\,v_1\\ v_2\\,]=${matrixToLatex(canonical.P)}.
+P=[\\,w\\ v\\,]=${matrixToLatex(canonical.P)}.
 \\]
 `
   } else {
