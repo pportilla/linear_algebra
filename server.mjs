@@ -96,6 +96,201 @@ function formatNumber(value) {
   return Number(clean.toPrecision(8)).toString()
 }
 
+function normalizeFraction(numerator, denominator = 1) {
+  if (Math.abs(numerator) < EPSILON) {
+    return { numerator: 0, denominator: 1 }
+  }
+
+  if (denominator < 0) {
+    return normalizeFraction(-numerator, -denominator)
+  }
+
+  const divisor = greatestCommonDivisor(Math.round(numerator), Math.round(denominator))
+  return {
+    numerator: Math.round(numerator) / divisor,
+    denominator: Math.round(denominator) / divisor,
+  }
+}
+
+function addFractions(left, right) {
+  return normalizeFraction(
+    left.numerator * right.denominator + right.numerator * left.denominator,
+    left.denominator * right.denominator,
+  )
+}
+
+function multiplyFractions(left, right) {
+  return normalizeFraction(left.numerator * right.numerator, left.denominator * right.denominator)
+}
+
+function negateFraction(value) {
+  return normalizeFraction(-value.numerator, value.denominator)
+}
+
+function isZeroFraction(value) {
+  return value.numerator === 0
+}
+
+function expressionFromNumber(value) {
+  const fraction = approximateFraction(value)
+  return fraction ? { rational: fraction } : null
+}
+
+function symbolicNumber(value) {
+  const expression = expressionFromNumber(value)
+
+  if (!expression) {
+    throw new Error(`No se pudo convertir ${value} en una expresión racional.`)
+  }
+
+  return expression
+}
+
+function extractSquareFactor(value) {
+  let outside = 1
+  let inside = value
+
+  for (let factor = 2; factor * factor <= inside; factor += 1) {
+    const square = factor * factor
+
+    while (inside % square === 0) {
+      inside /= square
+      outside *= factor
+    }
+  }
+
+  return { outside, inside }
+}
+
+function normalizeExpression(value) {
+  const rational = normalizeFraction(value.rational.numerator, value.rational.denominator)
+
+  if (!value.radical) {
+    return { rational }
+  }
+
+  const coefficient = normalizeFraction(value.radical.coefficient.numerator, value.radical.coefficient.denominator)
+
+  if (isZeroFraction(coefficient)) {
+    return { rational }
+  }
+
+  if (value.radical.radicand === 1) {
+    return { rational: addFractions(rational, coefficient) }
+  }
+
+  return { rational, radical: { coefficient, radicand: value.radical.radicand } }
+}
+
+function negateExpression(value) {
+  return normalizeExpression({
+    rational: negateFraction(value.rational),
+    radical: value.radical
+      ? { coefficient: negateFraction(value.radical.coefficient), radicand: value.radical.radicand }
+      : undefined,
+  })
+}
+
+function scaleExpression(value, numerator, denominator = 1) {
+  const factor = normalizeFraction(numerator, denominator)
+
+  return normalizeExpression({
+    rational: multiplyFractions(value.rational, factor),
+    radical: value.radical
+      ? { coefficient: multiplyFractions(value.radical.coefficient, factor), radicand: value.radical.radicand }
+      : undefined,
+  })
+}
+
+function addExpressions(left, right) {
+  if (left.radical && right.radical && left.radical.radicand !== right.radical.radicand) {
+    throw new Error('No se pueden sumar expresiones con radicales distintos.')
+  }
+
+  return normalizeExpression({
+    rational: addFractions(left.rational, right.rational),
+    radical: left.radical || right.radical
+      ? {
+          coefficient: addFractions(left.radical?.coefficient ?? normalizeFraction(0), right.radical?.coefficient ?? normalizeFraction(0)),
+          radicand: left.radical?.radicand ?? right.radical.radicand,
+        }
+      : undefined,
+  })
+}
+
+function subtractExpressions(left, right) {
+  return addExpressions(left, negateExpression(right))
+}
+
+function squareRootExpressionFromNumber(value) {
+  const fraction = approximateFraction(value)
+
+  if (!fraction || fraction.numerator < 0) {
+    return null
+  }
+
+  if (fraction.numerator === 0) {
+    return { rational: normalizeFraction(0) }
+  }
+
+  const numeratorParts = extractSquareFactor(Math.abs(fraction.numerator))
+  const denominatorParts = extractSquareFactor(fraction.denominator)
+  const coefficient = normalizeFraction(
+    numeratorParts.outside,
+    denominatorParts.outside * denominatorParts.inside,
+  )
+  const radicand = numeratorParts.inside * denominatorParts.inside
+
+  return normalizeExpression({
+    rational: normalizeFraction(0),
+    radical: { coefficient, radicand },
+  })
+}
+
+function formatFractionTex(value) {
+  if (value.denominator === 1) {
+    return value.numerator.toString()
+  }
+
+  if (value.numerator < 0) {
+    return `-\\frac{${Math.abs(value.numerator)}}{${value.denominator}}`
+  }
+
+  return `\\frac{${value.numerator}}{${value.denominator}}`
+}
+
+function formatRadicalTexAbs(coefficient, radicand) {
+  const numerator = Math.abs(coefficient.numerator)
+  const root = `\\sqrt{${radicand}}`
+
+  if (coefficient.denominator === 1) {
+    return numerator === 1 ? root : `${numerator}${root}`
+  }
+
+  if (numerator === 1) {
+    return `\\frac{${root}}{${coefficient.denominator}}`
+  }
+
+  return `\\frac{${numerator}${root}}{${coefficient.denominator}}`
+}
+
+function formatLatexExpression(value) {
+  const normalized = normalizeExpression(value)
+
+  if (!normalized.radical) {
+    return formatFractionTex(normalized.rational)
+  }
+
+  const radicalSign = normalized.radical.coefficient.numerator < 0 ? '-' : '+'
+  const radicalText = formatRadicalTexAbs(normalized.radical.coefficient, normalized.radical.radicand)
+
+  if (isZeroFraction(normalized.rational)) {
+    return radicalSign === '-' ? `-${radicalText}` : radicalText
+  }
+
+  return `${formatFractionTex(normalized.rational)}${radicalSign}${radicalText}`
+}
+
 function determinant2(matrix) {
   return matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[1][0]
 }
@@ -115,6 +310,14 @@ function isScalarMatrix(matrix, scalar) {
 
 function matrixToLatex(matrix) {
   return `\\begin{pmatrix}${matrix.map((row) => row.map(formatNumber).join(' & ')).join('\\\\')}\\end{pmatrix}`
+}
+
+function expressionVectorToLatex(entries) {
+  return `\\begin{pmatrix}${entries.map(formatLatexExpression).join('\\\\')}\\end{pmatrix}`
+}
+
+function expressionMatrixToLatex(matrix) {
+  return `\\begin{pmatrix}${matrix.map((row) => row.map(formatLatexExpression).join(' & ')).join('\\\\')}\\end{pmatrix}`
 }
 
 function subtractVectors(left, right) {
@@ -461,8 +664,76 @@ function complexEigenBasis(matrix, realPart, imaginaryPart) {
   }
 }
 
+function symbolicDistinctRealEigenvalues(trace, discriminant) {
+  const halfTrace = scaleExpression(symbolicNumber(trace), 1, 2)
+  const halfRoot = scaleExpression(
+    squareRootExpressionFromNumber(discriminant) ?? symbolicNumber(Math.sqrt(discriminant)),
+    1,
+    2,
+  )
+
+  return {
+    lambda1: addExpressions(halfTrace, halfRoot),
+    lambda2: subtractExpressions(halfTrace, halfRoot),
+  }
+}
+
+function symbolicComplexEigenParts(trace, discriminant) {
+  return {
+    realPart: scaleExpression(symbolicNumber(trace), 1, 2),
+    imaginaryPart: scaleExpression(
+      squareRootExpressionFromNumber(-discriminant) ?? symbolicNumber(Math.sqrt(-discriminant)),
+      1,
+      2,
+    ),
+  }
+}
+
+function symbolicMatrixMinusScalar(matrix, lambda) {
+  return [
+    [subtractExpressions(symbolicNumber(matrix[0][0]), lambda), symbolicNumber(matrix[0][1])],
+    [symbolicNumber(matrix[1][0]), subtractExpressions(symbolicNumber(matrix[1][1]), lambda)],
+  ]
+}
+
+function symbolicDistinctRealEigenvector(matrix, lambda, lambdaValue) {
+  const shifted = matrixMinusScalar(matrix, lambdaValue)
+  const row0Norm = Math.abs(shifted[0][0]) + Math.abs(shifted[0][1])
+  const row1Norm = Math.abs(shifted[1][0]) + Math.abs(shifted[1][1])
+
+  if (row0Norm >= row1Norm && row0Norm > EPSILON) {
+    return [symbolicNumber(matrix[0][1]), subtractExpressions(lambda, symbolicNumber(matrix[0][0]))]
+  }
+
+  if (row1Norm > EPSILON) {
+    return [subtractExpressions(lambda, symbolicNumber(matrix[1][1])), symbolicNumber(matrix[1][0])]
+  }
+
+  return [symbolicNumber(1), symbolicNumber(0)]
+}
+
+function symbolicComplexEigenBasis(matrix, realPart, imaginaryPart) {
+  const [[a11, a12], [a21, a22]] = matrix
+
+  if (Math.abs(a12) > EPSILON) {
+    return {
+      u: [symbolicNumber(a12), subtractExpressions(realPart, symbolicNumber(a11))],
+      v: [symbolicNumber(0), imaginaryPart],
+    }
+  }
+
+  return {
+    u: [subtractExpressions(realPart, symbolicNumber(a22)), symbolicNumber(a21)],
+    v: [imaginaryPart, symbolicNumber(0)],
+  }
+}
+
 function matrixToLatex3x3(M) {
   return `\\begin{pmatrix}${M[0].map(formatNumber).join(' & ')}\\\\${M[1].map(formatNumber).join(' & ')}\\\\${M[2].map(formatNumber).join(' & ')}\\end{pmatrix}`
+}
+
+function homogeneousLinearBlockToLatex(linearTex) {
+  return `\\begin{pmatrix}1&0\\\\0&${linearTex}\\end{pmatrix}`
 }
 
 function multiplyMatrices3(left, right) {
@@ -506,7 +777,21 @@ function affineHomogeneousVerification(linearPart, translation, origin, basis) {
   }
 }
 
-function affineHomogeneousVerificationLatex(linearPart, translation, origin, basis) {
+function affineHomogeneousVerificationLatex(linearPart, translation, origin, basis, basisTex, canonicalHomogeneousTex) {
+  if (basisTex && canonicalHomogeneousTex) {
+    return `
+La matriz del cambio de referencia $x=O+Pz$ se escribe en bloques como
+\\[
+C=\\begin{pmatrix}1&0\\\\O&P\\end{pmatrix},
+\\qquad O=${vecToLatex(origin)},\\qquad P=${basisTex}.
+\\]
+Por la multiplicatividad de las matrices homogéneas,
+\\[
+C^{-1}H_FC=H_{\\mathrm{can}}=${canonicalHomogeneousTex}.
+\\]
+`
+  }
+
   const { change, transformed } = affineHomogeneousVerification(linearPart, translation, origin, basis)
 
   if (!transformed) {
@@ -550,20 +835,25 @@ function buildLinearCanonical(matrix, analysis) {
     const v1 = eigenvectorFor(matrix, analysis.lambda1)
     const v2 = eigenvectorFor(matrix, analysis.lambda2)
     const P = matrixFromColumns(v1, v2)
+    const symbolicEigenvalues = symbolicDistinctRealEigenvalues(analysis.trace, analysis.discriminant)
+    const symbolicV1 = symbolicDistinctRealEigenvector(matrix, symbolicEigenvalues.lambda1, analysis.lambda1)
+    const symbolicV2 = symbolicDistinctRealEigenvector(matrix, symbolicEigenvalues.lambda2, analysis.lambda2)
+    const pTex = expressionMatrixToLatex([[symbolicV1[0], symbolicV2[0]], [symbolicV1[1], symbolicV2[1]]])
+    const canonicalTex = expressionMatrixToLatex([[symbolicEigenvalues.lambda1, symbolicNumber(0)], [symbolicNumber(0), symbolicEigenvalues.lambda2]])
     const body = `
-Tenemos dos autovalores reales distintos, $\\lambda_1=${formatNumber(analysis.lambda1)}$ y $\\lambda_2=${formatNumber(analysis.lambda2)}$. Para cada uno buscamos un autovector resolviendo $(A-\\lambda_i I)\\,v=0$:
+Tenemos dos autovalores reales distintos, $\\lambda_1=${formatLatexExpression(symbolicEigenvalues.lambda1)}$ y $\\lambda_2=${formatLatexExpression(symbolicEigenvalues.lambda2)}$. Para cada uno buscamos un autovector resolviendo $(A-\\lambda_i I)\\,v=0$:
 \\[
-A-\\lambda_1 I=${matrixToLatex(matrixMinusScalar(matrix, analysis.lambda1))}\\ \\implies\\ v_1=${vecToLatex(v1)},
+A-\\lambda_1 I=${expressionMatrixToLatex(symbolicMatrixMinusScalar(matrix, symbolicEigenvalues.lambda1))}\\ \\implies\\ v_1=${expressionVectorToLatex(symbolicV1)},
 \\]
 \\[
-A-\\lambda_2 I=${matrixToLatex(matrixMinusScalar(matrix, analysis.lambda2))}\\ \\implies\\ v_2=${vecToLatex(v2)}.
+A-\\lambda_2 I=${expressionMatrixToLatex(symbolicMatrixMinusScalar(matrix, symbolicEigenvalues.lambda2))}\\ \\implies\\ v_2=${expressionVectorToLatex(symbolicV2)}.
 \\]
-Colocando los autovectores como columnas obtenemos $P=[\\,v_1\\ v_2\\,]=${matrixToLatex(P)}$, y la forma canónica correspondiente es
+Colocando los autovectores como columnas obtenemos $P=[\\,v_1\\ v_2\\,]=${pTex}$, y la forma canónica correspondiente es
 \\[
-J=${matrixToLatex(analysis.canonicalMatrix)}.
+J=${canonicalTex}.
 \\]
 `
-    return { v1, v2, P, canonical: analysis.canonicalMatrix, body }
+    return { v1, v2, P, canonical: analysis.canonicalMatrix, pTex, canonicalTex, homogeneousTex: homogeneousLinearBlockToLatex(canonicalTex), hasSymbolicEntries: true, body }
   }
 
   if (analysis.caseId === 'scalar') {
@@ -574,6 +864,10 @@ J=${matrixToLatex(analysis.canonicalMatrix)}.
       v2,
       P: [[1, 0], [0, 1]],
       canonical: analysis.canonicalMatrix,
+      pTex: matrixToLatex([[1, 0], [0, 1]]),
+      canonicalTex: matrixToLatex(analysis.canonicalMatrix),
+      homogeneousTex: matrixToLatex3x3(homogeneousFromAffine(analysis.canonicalMatrix, { x: 0, y: 0 })),
+      hasSymbolicEntries: false,
       body: `
 Aquí $A=${formatNumber(analysis.lambda)}\\,I$: todo vector no nulo es autovector. Podemos quedarnos con la base canónica, $v_1=e_1$ y $v_2=e_2$, con lo que $P=I$ y la forma de Jordan es simplemente la propia $A$:
 \\[
@@ -592,6 +886,10 @@ J=${matrixToLatex(analysis.canonicalMatrix)}.
       v2: eigen,
       P,
       canonical: analysis.canonicalMatrix,
+      pTex: matrixToLatex(P),
+      canonicalTex: matrixToLatex(analysis.canonicalMatrix),
+      homogeneousTex: matrixToLatex3x3(homogeneousFromAffine(analysis.canonicalMatrix, { x: 0, y: 0 })),
+      hasSymbolicEntries: false,
       body: `
 Estamos en el caso del autovalor doble $\\lambda=${formatNumber(analysis.lambda)}$ con un único bloque de Jordan. Primero calculamos un autovector resolviendo $(A-\\lambda I)\\,v=0$:
 \\[
@@ -611,19 +909,27 @@ J=${matrixToLatex(analysis.canonicalMatrix)}.
 
   const { u, v } = complexEigenBasis(matrix, analysis.realPart, analysis.imaginaryPart)
   const P = matrixFromColumns(v, u)
+  const symbolicParts = symbolicComplexEigenParts(analysis.trace, analysis.discriminant)
+  const symbolicBasis = symbolicComplexEigenBasis(matrix, symbolicParts.realPart, symbolicParts.imaginaryPart)
+  const pTex = expressionMatrixToLatex([[symbolicBasis.v[0], symbolicBasis.u[0]], [symbolicBasis.v[1], symbolicBasis.u[1]]])
+  const canonicalTex = expressionMatrixToLatex([[symbolicParts.realPart, negateExpression(symbolicParts.imaginaryPart)], [symbolicParts.imaginaryPart, symbolicParts.realPart]])
   return {
     v1: v,
     v2: u,
     P,
     canonical: analysis.canonicalMatrix,
+    pTex,
+    canonicalTex,
+    homogeneousTex: homogeneousLinearBlockToLatex(canonicalTex),
+    hasSymbolicEntries: true,
     body: `
-Los autovalores son complejos conjugados, $\\lambda_{\\pm}=${formatNumber(analysis.realPart)}\\pm ${formatNumber(analysis.imaginaryPart)}\\,i$. Buscamos un autovector complejo de $\\lambda_+$ y lo descomponemos en parte real e imaginaria:
+Los autovalores son complejos conjugados, $\\lambda_{\\pm}=${formatLatexExpression(symbolicParts.realPart)}\\pm ${formatLatexExpression(symbolicParts.imaginaryPart)}\\,i$. Buscamos un autovector complejo de $\\lambda_+$ y lo descomponemos en parte real e imaginaria:
 \\[
-u=${vecToLatex(u)}\\ \\text{(parte real)},\\qquad v=${vecToLatex(v)}\\ \\text{(parte imaginaria)}.
+u=${expressionVectorToLatex(symbolicBasis.u)}\\ \\text{(parte real)},\\qquad v=${expressionVectorToLatex(symbolicBasis.v)}\\ \\text{(parte imaginaria)}.
 \\]
 Para que la conjugación dé exactamente el bloque $\\begin{pmatrix}a & -b\\\\b & a\\end{pmatrix}$, colocamos la parte imaginaria en la primera columna:
 \\[
-P=[\\,v\\ u\\,]=${matrixToLatex(P)},\\qquad J_{\\mathbb R}=${matrixToLatex(analysis.canonicalMatrix)}.
+P=[\\,v\\ u\\,]=${pTex},\\qquad J_{\\mathbb R}=${canonicalTex}.
 \\]
 `,
   }
@@ -647,11 +953,16 @@ function buildLinearTex(payload) {
   const canonical = buildLinearCanonical(matrix, analysis)
   const invP = inverse2(canonical.P)
   const verification = invP ? multiplyMatrices(multiplyMatrices(invP, matrix), canonical.P) : canonical.canonical
+  const pDisplay = canonical.pTex
+  const canonicalDisplay = canonical.canonicalTex
 
   let caseTitle = ''
   let caseBody = ''
 
   if (analysis.caseId === 'distinct-real') {
+    const symbolicEigenvalues = symbolicDistinctRealEigenvalues(trace, discriminant)
+    const symbolicV1 = symbolicDistinctRealEigenvector(matrix, symbolicEigenvalues.lambda1, analysis.lambda1)
+    const symbolicV2 = symbolicDistinctRealEigenvector(matrix, symbolicEigenvalues.lambda2, analysis.lambda2)
     caseTitle = 'dos autovalores reales distintos'
     caseBody = `
 \\subsection*{Paso 6. Clasificación y autovalores}
@@ -661,35 +972,35 @@ Calculamos el discriminante del polinomio característico:
 \\]
 Al ser positivo, $p_A$ tiene dos raíces reales distintas,
 \\[
-\\lambda_1=\\frac{${formatNumber(trace)}+\\sqrt{${formatNumber(discriminant)}}}{2}=${formatNumber(analysis.lambda1)},
+\\lambda_1=\\frac{${formatNumber(trace)}+\\sqrt{${formatNumber(discriminant)}}}{2}=${formatLatexExpression(symbolicEigenvalues.lambda1)},
 \\qquad
-\\lambda_2=\\frac{${formatNumber(trace)}-\\sqrt{${formatNumber(discriminant)}}}{2}=${formatNumber(analysis.lambda2)}.
+\\lambda_2=\\frac{${formatNumber(trace)}-\\sqrt{${formatNumber(discriminant)}}}{2}=${formatLatexExpression(symbolicEigenvalues.lambda2)}.
 \\]
 Con dos autovalores reales distintos, $A$ es diagonalizable y su forma de Jordan es la matriz diagonal formada por esos autovalores:
 \\[
-J=${matrixToLatex(analysis.canonicalMatrix)}.
+J=${canonical.canonicalTex}.
 \\]
 
 \\subsection*{Paso 7. Autovectores y matriz de cambio de base}
 Para cada autovalor buscamos un vector columna no nulo que cumpla $(A-\\lambda_i I)\\,v=0$. Como $A-\\lambda_i I$ es singular, podemos tomar un vector perpendicular a cualquiera de sus filas no nulas.
 
-Para $\\lambda_1=${formatNumber(analysis.lambda1)}$:
+Para $\\lambda_1=${formatLatexExpression(symbolicEigenvalues.lambda1)}$:
 \\[
-A-\\lambda_1 I=${matrixToLatex(matrixMinusScalar(matrix, analysis.lambda1))}
+A-\\lambda_1 I=${expressionMatrixToLatex(symbolicMatrixMinusScalar(matrix, symbolicEigenvalues.lambda1))}
 \\quad\\implies\\quad
-v_1=${vecToLatex(canonical.v1)}.
+v_1=${expressionVectorToLatex(symbolicV1)}.
 \\]
 
-Para $\\lambda_2=${formatNumber(analysis.lambda2)}$:
+Para $\\lambda_2=${formatLatexExpression(symbolicEigenvalues.lambda2)}$:
 \\[
-A-\\lambda_2 I=${matrixToLatex(matrixMinusScalar(matrix, analysis.lambda2))}
+A-\\lambda_2 I=${expressionMatrixToLatex(symbolicMatrixMinusScalar(matrix, symbolicEigenvalues.lambda2))}
 \\quad\\implies\\quad
-v_2=${vecToLatex(canonical.v2)}.
+v_2=${expressionVectorToLatex(symbolicV2)}.
 \\]
 
 Pegamos los dos autovectores como columnas para formar la matriz de cambio de base:
 \\[
-P=[\\,v_1\\ v_2\\,]=${matrixToLatex(canonical.P)}.
+P=[\\,v_1\\ v_2\\,]=${canonical.pTex}.
 \\]
 `
   } else if (analysis.caseId === 'scalar') {
@@ -738,6 +1049,8 @@ P=[\\,w\\ v\\,]=${matrixToLatex(canonical.P)}.
 \\]
 `
   } else {
+    const symbolicParts = symbolicComplexEigenParts(trace, discriminant)
+    const symbolicBasis = symbolicComplexEigenBasis(matrix, symbolicParts.realPart, symbolicParts.imaginaryPart)
     caseTitle = 'par de autovalores complejos conjugados'
     caseBody = `
 \\subsection*{Paso 6. Clasificación y autovalores complejos}
@@ -747,26 +1060,45 @@ El discriminante es negativo,
 \\]
 así que $p_A$ no tiene raíces reales: los autovalores son complejos conjugados,
 \\[
-\\lambda_{\\pm}=${formatNumber(analysis.realPart)}\\pm ${formatNumber(analysis.imaginaryPart)}\\,i.
+\\lambda_{\\pm}=${formatLatexExpression(symbolicParts.realPart)}\\pm ${formatLatexExpression(symbolicParts.imaginaryPart)}\\,i.
 \\]
 Sobre $\\mathbb R$ no existe una forma de Jordan real. En su lugar usamos el bloque canónico real
 \\[
-J_{\\mathbb R}=${matrixToLatex(analysis.canonicalMatrix)}.
+J_{\\mathbb R}=${canonical.canonicalTex}.
 \\]
 
 \\subsection*{Paso 7. Autovector complejo y base real}
 Buscamos un autovector complejo $z=u+iv$ asociado a $\\lambda_+=a+bi$ como núcleo complejo de $A-\\lambda_+ I$, y lo separamos en parte real e imaginaria:
 \\[
-u=${vecToLatex(canonical.v2)}\\ \\text{(parte real)},\\qquad v=${vecToLatex(canonical.v1)}\\ \\text{(parte imaginaria)}.
+u=${expressionVectorToLatex(symbolicBasis.u)}\\ \\text{(parte real)},\\qquad v=${expressionVectorToLatex(symbolicBasis.v)}\\ \\text{(parte imaginaria)}.
 \\]
 Si ordenamos la base como $(v,u)$ —parte imaginaria primero—, la conjugación reproduce exactamente el bloque $\\begin{pmatrix}a & -b\\\\b & a\\end{pmatrix}$:
 \\[
-P=[\\,v\\ u\\,]=${matrixToLatex(canonical.P)}.
+P=[\\,v\\ u\\,]=${canonical.pTex}.
 \\]
 `
   }
 
   const symbolJ = analysis.caseId === 'complex-pair' ? 'J_{\\mathbb R}' : 'J'
+  const verificationNarrative = canonical.hasSymbolicEntries
+    ? `
+Se conserva la matriz de cambio de base en forma simbólica:
+\\[
+P=${pDisplay}.
+\\]
+Con esta base adaptada, la conjugación queda
+\\[
+P^{-1}AP=${canonicalDisplay}=${symbolJ}.
+\\]
+`
+    : `
+Se invierte la matriz de cambio de base y se comprueba que $P^{-1}AP=${symbolJ}$.
+${linearInverseNarrative(canonical.P, 'P')}
+Efectuando el producto,
+\\[
+P^{-1}AP=${matrixToLatex(verification)}=${canonicalDisplay}=${symbolJ}.
+\\]
+`
 
   return `
 \\documentclass[11pt]{article}
@@ -823,12 +1155,7 @@ ${characteristic}.
 ${caseBody}
 
 \\subsection*{Paso 8. Verificación de la forma canónica}
-Se invierte la matriz de cambio de base y se comprueba que $P^{-1}AP=${symbolJ}$.
-${linearInverseNarrative(canonical.P, 'P')}
-Efectuando el producto,
-\\[
-P^{-1}AP=${matrixToLatex(verification)}=${matrixToLatex(analysis.canonicalMatrix)}=${symbolJ}.
-\\]
+${verificationNarrative}
 
 \\subsection*{Resumen final}
 \\begin{enumerate}
@@ -846,9 +1173,9 @@ Conclusión:
 \\[
 A=${matrixToLatex(matrix)},
 \\qquad
-P=${matrixToLatex(canonical.P)},
+P=${pDisplay},
 \\qquad
-${symbolJ}=${matrixToLatex(analysis.canonicalMatrix)}.
+${symbolJ}=${canonicalDisplay}.
 \\]
 \\end{document}
 `
@@ -893,6 +1220,24 @@ function buildAffineCaseWithFixedSet(linearPart, translation, fixedSet, analysis
     ? multiplyMatrices(multiplyMatrices(invP, linearPart), canonical.P)
     : canonical.canonical
   const symbolJ = analysis.caseId === 'complex-pair' ? 'J_{\\mathbb R}' : 'J'
+  const linearVerification = canonical.hasSymbolicEntries
+    ? `
+Con la matriz de cambio
+\\[
+P=${canonical.pTex}
+\\]
+se obtiene simbólicamente
+\\[
+P^{-1}AP=${canonical.canonicalTex}=${symbolJ}.
+\\]
+`
+    : `
+Invirtiendo $P$ se verifica la conjugación:
+${linearInverseNarrative(canonical.P, 'P')}
+\\[
+P^{-1}AP=${matrixToLatex(verification)}=${canonical.canonicalTex}=${symbolJ}.
+\\]
+`
   let fixedSetExplanation = ''
 
   if (fixedSet.kind === 'point' && fixedSet.point) {
@@ -933,24 +1278,20 @@ es decir, la traslación desaparece. Este es exactamente el caso compatible del 
 
 \\subsection*{Paso 4. Reducir la parte lineal $A$}
 ${canonical.body}
-Invirtiendo $P$ se verifica la conjugación:
-${linearInverseNarrative(canonical.P, 'P')}
-\\[
-P^{-1}AP=${matrixToLatex(verification)}=${matrixToLatex(analysis.canonicalMatrix)}=${symbolJ}.
-\\]
+${linearVerification}
 
 \\subsection*{Paso 5. Escribir la referencia afín adaptada}
 La referencia afín en la que $F$ adopta su forma normal es
 \\[
-\\mathcal R=(${vecToLatex(chosenOrigin)},(${vecToLatex(canonical.v1)},${vecToLatex(canonical.v2)})).
+\\mathcal R=(c_0,P),\\qquad c_0=${vecToLatex(chosenOrigin)},\\qquad P=${canonical.pTex}.
 \\]
 En esa referencia la traslación es nula y la parte lineal es $${symbolJ}$.
 
 \\subsection*{Paso 6. Escribir y comprobar la matriz homogénea canónica}
-${affineHomogeneousVerificationLatex(linearPart, translation, chosenOrigin, canonical.P)}
+${affineHomogeneousVerificationLatex(linearPart, translation, chosenOrigin, canonical.P, canonical.hasSymbolicEntries ? canonical.pTex : undefined, canonical.hasSymbolicEntries ? canonical.homogeneousTex : undefined)}
 La matriz homogénea de la forma normal afín es
 \\[
-H_{\\mathrm{can}}=${matrixToLatex3x3(homogeneousFromAffine(analysis.canonicalMatrix, { x: 0, y: 0 }))}.
+H_{\\mathrm{can}}=${canonical.homogeneousTex}.
 \\]
 `
 }
@@ -1153,13 +1494,13 @@ ${canonical.body}
 
 \\subsection*{Paso 5. Escribir la referencia afín adaptada}
 \\[
-\\mathcal R=((0,0),(${vecToLatex(canonical.v1)},${vecToLatex(canonical.v2)})).
+\\mathcal R=(0,P),\\qquad P=${canonical.pTex}.
 \\]
 En esa referencia $F$ actúa como la forma canónica real de $A$:
 
 \\subsection*{Paso 6. Escribir y comprobar la matriz homogénea canónica}
 \\[
-H_{\\mathrm{can}}=${matrixToLatex3x3(homogeneousFromAffine(analysis.canonicalMatrix, { x: 0, y: 0 }))}\\ (${symbolJ}\\text{ en las dos primeras columnas}).
+H_{\\mathrm{can}}=${canonical.homogeneousTex}\\ (${symbolJ}\\text{ en las dos primeras columnas}).
 \\]
 `
 }

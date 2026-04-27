@@ -67,6 +67,14 @@ function expressionMatrixTex(matrix: SymbolicExpression[][]) {
   return `\\begin{pmatrix}${matrix.map((row) => row.map(formatLatexExpression).join(' & ')).join('\\\\')}\\end{pmatrix}`
 }
 
+function expressionHomogeneousLinearTex(matrix: SymbolicExpression[][]) {
+  return `\\begin{pmatrix}1 & 0 & 0\\\\0 & ${formatLatexExpression(matrix[0][0])} & ${formatLatexExpression(matrix[0][1])}\\\\0 & ${formatLatexExpression(matrix[1][0])} & ${formatLatexExpression(matrix[1][1])}\\end{pmatrix}`
+}
+
+function homogeneousLinearMatrixTex(matrix: Matrix2) {
+  return matrixTex(homogeneousFromAffine(matrix, { x: 0, y: 0 }))
+}
+
 function symbolicDistinctRealEigenvalues(trace: number, discriminant: number) {
   const halfTrace = scaleExpression(symbolicNumber(trace), 1, 2)
   const halfRoot = scaleExpression(
@@ -183,6 +191,13 @@ function matrixMinusScalar(matrix: Matrix2, scalar: number): Matrix2 {
   ]
 }
 
+function identityMinusMatrix(matrix: Matrix2): Matrix2 {
+  return [
+    [1 - matrix[0][0], -matrix[0][1]],
+    [-matrix[1][0], 1 - matrix[1][1]],
+  ]
+}
+
 function kernelVectorOfSingular(matrix: Matrix2): Vec2 {
   const [[a, b], [c, d]] = matrix
 
@@ -265,6 +280,8 @@ type LinearCanonicalData = {
   P: Matrix2
   pTex: string
   canonicalTex: string
+  canonicalHomogeneousTex: string
+  hasSymbolicEntries: boolean
   classificationBlocks: ReportBlock[]
   basisChangeBlocks: ReportBlock[]
 }
@@ -281,13 +298,16 @@ function buildLinearCanonicalData(matrix: Matrix2, trace: number, determinant: n
     const symbolicV1 = symbolicDistinctRealEigenvector(matrix, symbolicEigenvalues.lambda1, lambda1)
     const symbolicV2 = symbolicDistinctRealEigenvector(matrix, symbolicEigenvalues.lambda2, lambda2)
     const pTex = expressionMatrixTex([[symbolicV1[0], symbolicV2[0]], [symbolicV1[1], symbolicV2[1]]])
-    const canonicalTex = expressionMatrixTex([[symbolicEigenvalues.lambda1, symbolicNumber(0)], [symbolicNumber(0), symbolicEigenvalues.lambda2]])
+    const canonicalEntries = [[symbolicEigenvalues.lambda1, symbolicNumber(0)], [symbolicNumber(0), symbolicEigenvalues.lambda2]]
+    const canonicalTex = expressionMatrixTex(canonicalEntries)
 
     return {
       symbolJ: 'J',
       P,
       pTex,
       canonicalTex,
+      canonicalHomogeneousTex: expressionHomogeneousLinearTex(canonicalEntries),
+      hasSymbolicEntries: true,
       classificationBlocks: [
         paragraph('Ahora miramos el discriminante del polinomio característico, porque su signo separa los tres escenarios básicos en dimensión dos.'),
         math(`\\Delta=\\operatorname{tr}(A)^2-4\\det(A)=(${formatTexNumber(trace)})^2-4(${formatTexNumber(determinant)})=${formatTexNumber(discriminant)}>0`),
@@ -320,6 +340,8 @@ function buildLinearCanonicalData(matrix: Matrix2, trace: number, determinant: n
         P: [[1, 0], [0, 1]],
         pTex,
         canonicalTex,
+        canonicalHomogeneousTex: homogeneousLinearMatrixTex([[lambda, 0], [0, lambda]]),
+        hasSymbolicEntries: false,
         classificationBlocks: [
           paragraph('El discriminante se anula, de modo que sólo aparece un autovalor.'),
           math(`\\lambda=\\frac{\\operatorname{tr}(A)}{2}=${formatTexNumber(lambda)}`),
@@ -337,13 +359,16 @@ function buildLinearCanonicalData(matrix: Matrix2, trace: number, determinant: n
     const generalized = generalizedEigenvectorFor(matrix, lambda, eigen)
     const P = matrixFromImages(generalized, eigen)
     const pTex = matrixTex(P)
-    const canonicalTex = matrixTex([[lambda, 0], [1, lambda]])
+    const canonicalMatrix: Matrix2 = [[lambda, 0], [1, lambda]]
+    const canonicalTex = matrixTex(canonicalMatrix)
 
     return {
       symbolJ: 'J',
       P,
       pTex,
       canonicalTex,
+      canonicalHomogeneousTex: homogeneousLinearMatrixTex(canonicalMatrix),
+      hasSymbolicEntries: false,
       classificationBlocks: [
         paragraph('El discriminante vuelve a anularse, así que estamos ante un autovalor doble.'),
         math(`\\lambda=\\frac{\\operatorname{tr}(A)}{2}=${formatTexNumber(lambda)}`),
@@ -368,13 +393,16 @@ function buildLinearCanonicalData(matrix: Matrix2, trace: number, determinant: n
   const symbolicParts = symbolicComplexEigenParts(trace, discriminant)
   const symbolicBasis = symbolicComplexEigenBasis(matrix, symbolicParts.realPart, symbolicParts.imaginaryPart)
   const pTex = expressionMatrixTex([[symbolicBasis.v[0], symbolicBasis.u[0]], [symbolicBasis.v[1], symbolicBasis.u[1]]])
-  const canonicalTex = expressionMatrixTex([[symbolicParts.realPart, negateExpression(symbolicParts.imaginaryPart)], [symbolicParts.imaginaryPart, symbolicParts.realPart]])
+  const canonicalEntries = [[symbolicParts.realPart, negateExpression(symbolicParts.imaginaryPart)], [symbolicParts.imaginaryPart, symbolicParts.realPart]]
+  const canonicalTex = expressionMatrixTex(canonicalEntries)
 
   return {
     symbolJ: 'J_{\\mathbb R}',
     P,
     pTex,
     canonicalTex,
+    canonicalHomogeneousTex: expressionHomogeneousLinearTex(canonicalEntries),
+    hasSymbolicEntries: true,
     classificationBlocks: [
       paragraph('Si el discriminante sale negativo, el polinomio característico ya no tiene raíces reales.'),
       math(`\\Delta=${formatTexNumber(discriminant)}<0`),
@@ -579,8 +607,8 @@ function invalidAffineDocument(input: AffineReportInput): PrintableReportDocumen
   }
 }
 
-function affineNormalMapTex(canonicalLinearPart: Matrix2, canonicalTranslation: Vec2) {
-  return `F_{\\mathrm{can}}(x)=${matrixTex(canonicalLinearPart)}x+${vectorTex(canonicalTranslation)}`
+function affineNormalMapTex(canonicalLinearPart: Matrix2, canonicalTranslation: Vec2, canonicalLinearTex?: string) {
+  return `F_{\\mathrm{can}}(x)=${canonicalLinearTex ?? matrixTex(canonicalLinearPart)}x+${vectorTex(canonicalTranslation)}`
 }
 
 function buildAffineClassificationBlocks(
@@ -594,17 +622,16 @@ function buildAffineClassificationBlocks(
     return [note('No hay clasificación afín disponible para los datos actuales.', 'warning')]
   }
 
-  const system = matrixMinusScalar(linearPart, 1)
-  const rhs = { x: -translation.x, y: -translation.y }
+  const system = identityMinusMatrix(linearPart)
   const blocks: ReportBlock[] = [
-    paragraph('Con la descomposición afín F(x) = A x + t ya reconstruida, toca decidir si el término de traslación puede absorberse mediante un cambio de origen. El criterio es estudiar la ecuación de puntos fijos.'),
+    paragraph('Con la descomposición afín F(x) = A x + b ya reconstruida, toca decidir si el término de traslación puede absorberse mediante un cambio de origen. El criterio es estudiar la ecuación de puntos fijos.'),
     facts([
       textFact('Caso afín', analysis.caseLabel),
       textFact('Conjunto fijo', analysis.fixedSet.label),
       textFact('Forma normal', analysis.canonicalFixedSet.label),
       textFact('Lectura geométrica', analysis.shortText),
     ]),
-    math(`(A-I)c=-t,\\qquad A-I=${matrixTex(system)},\\qquad -t=${vectorTex(rhs)}`),
+    math(`(I-A)x=b,\\qquad I-A=${matrixTex(system)},\\qquad b=${vectorTex(translation)}`),
   ]
 
   if (analysis.fixedSet.kind === 'point' && analysis.fixedSet.point) {
@@ -669,16 +696,16 @@ function fixedSetOrigin(analysis: AffineAnalysis): Vec2 {
   return { x: 0, y: 0 }
 }
 
-function affineNormalFacts(analysis: AffineAnalysis): ReportBlock[] {
+function affineNormalFacts(analysis: AffineAnalysis, canonicalLinearTex?: string, canonicalHomogeneousTex?: string): ReportBlock[] {
   return [
     facts([
-      mathFact('A_{\\mathrm{can}}', matrixTex(analysis.canonicalLinearPart), true),
-      mathFact('t_{\\mathrm{can}}', vectorTex(analysis.canonicalTranslation)),
+      mathFact('A_{\\mathrm{can}}', canonicalLinearTex ?? matrixTex(analysis.canonicalLinearPart), true),
+      mathFact('b_{\\mathrm{can}}', vectorTex(analysis.canonicalTranslation)),
       textFact('Conjunto fijo canónico', analysis.canonicalFixedSet.label),
       textFact('Lectura rápida', analysis.shortText),
     ]),
-    math(`H_{\\mathrm{can}}=${matrixTex(analysis.canonicalHomogeneous)}`),
-    math(affineNormalMapTex(analysis.canonicalLinearPart, analysis.canonicalTranslation)),
+    math(`H_{\\mathrm{can}}=${canonicalHomogeneousTex ?? matrixTex(analysis.canonicalHomogeneous)}`),
+    math(affineNormalMapTex(analysis.canonicalLinearPart, analysis.canonicalTranslation, canonicalLinearTex)),
   ]
 }
 
@@ -708,7 +735,22 @@ function inverseHomogeneousChangeOfReference(origin: Vec2, basis: Matrix2) {
   return homogeneousFromAffine(inverseBasis, applyMatrix(inverseBasis, { x: -origin.x, y: -origin.y }))
 }
 
-function affineHomogeneousVerificationBlocks(linearPart: Matrix2, translation: Vec2, origin: Vec2, basis: Matrix2): ReportBlock[] {
+function affineHomogeneousVerificationBlocks(
+  linearPart: Matrix2,
+  translation: Vec2,
+  origin: Vec2,
+  basis: Matrix2,
+  basisTex?: string,
+  canonicalHomogeneousTex?: string,
+): ReportBlock[] {
+  if (basisTex && canonicalHomogeneousTex) {
+    return [
+      paragraph('El último paso comprueba la forma normal con la matriz homogénea del cambio de referencia x = O + Pz. Mantenemos P en forma simbólica para no perder fracciones ni raíces.'),
+      math(`C=\\begin{pmatrix}1&0\\\\O&P\\end{pmatrix},\\qquad O=${vectorTex(origin)},\\qquad P=${basisTex}`),
+      math(`C^{-1}H_FC=H_{\\mathrm{can}}=${canonicalHomogeneousTex}`),
+    ]
+  }
+
   const change = homogeneousChangeOfReference(origin, basis)
   const inverseChange = inverseHomogeneousChangeOfReference(origin, basis)
 
@@ -731,13 +773,16 @@ function affineHomogeneousVerificationBlocks(linearPart: Matrix2, translation: V
   ]
 }
 
-function referenceBlock(origin: Vec2, basis: Matrix2): ReportBlock {
+function referenceBlock(origin: Vec2, basis: Matrix2, basisTex?: string): ReportBlock {
+  if (basisTex) {
+    return math(`\\mathcal R=(O,P),\\qquad O=${vectorTex(origin)},\\qquad P=${basisTex}`)
+  }
+
   return math(`\\mathcal R=(${vectorTex(origin)},(${vectorTex({ x: basis[0][0], y: basis[1][0] })},${vectorTex({ x: basis[0][1], y: basis[1][1] })}))`)
 }
 
 function buildAffineNormalAlgorithmSections(linearPart: Matrix2, translation: Vec2, analysis: AffineAnalysis): ReportSection[] {
-  const system = matrixMinusScalar(linearPart, 1)
-  const rhs = { x: -translation.x, y: -translation.y }
+  const system = identityMinusMatrix(linearPart)
 
   if (analysis.fixedSet.kind !== 'none') {
     const origin = fixedSetOrigin(analysis)
@@ -745,9 +790,12 @@ function buildAffineNormalAlgorithmSections(linearPart: Matrix2, translation: Ve
     const linearDeterminant = determinant2(linearPart)
     const discriminant = linearTrace * linearTrace - 4 * linearDeterminant
     const canonicalData = buildLinearCanonicalData(linearPart, linearTrace, linearDeterminant, discriminant)
+    const canonicalHomogeneousTex = canonicalData.canonicalHomogeneousTex
+    const verificationBasisTex = canonicalData.hasSymbolicEntries ? canonicalData.pTex : undefined
+    const verificationHomogeneousTex = canonicalData.hasSymbolicEntries ? canonicalHomogeneousTex : undefined
     const fixedBlocks: ReportBlock[] = [
       paragraph('Como la ecuación de puntos fijos es compatible, el algoritmo del capítulo 7 elige una solución como nuevo origen. Con ese cambio, la traslación desaparece.'),
-      math(`(A-I)c=-t,\\qquad A-I=${matrixTex(system)},\\qquad -t=${vectorTex(rhs)}`),
+      math(`(I-A)x=b,\\qquad I-A=${matrixTex(system)},\\qquad b=${vectorTex(translation)}`),
     ]
 
     if (analysis.fixedSet.kind === 'point' && analysis.fixedSet.point) {
@@ -764,8 +812,8 @@ function buildAffineNormalAlgorithmSections(linearPart: Matrix2, translation: Ve
     return [
       section('eliminar-traslacion', 'Paso 3', 'Si hay punto fijo, eliminar la traslación', [
         ...fixedBlocks,
-        paragraph('Con el cambio de coordenadas y = x - c0, la traslación desaparece y la clasificación afín se reduce a la parte lineal.'),
-        math('\\widetilde F(y)=F(y+c_0)-c_0=A y'),
+        paragraph('Con el cambio de coordenadas z = x - c0, la traslación desaparece y la clasificación afín se reduce a la parte lineal.'),
+        math('\\tau_{-c_0}\\circ F\\circ\\tau_{c_0}(z)=Az'),
       ], 'El caso compatible se centra en un punto fijo.'),
       section('reducir-lineal', 'Paso 4', 'Reducir la parte lineal', [
         ...canonicalData.classificationBlocks,
@@ -773,11 +821,11 @@ function buildAffineNormalAlgorithmSections(linearPart: Matrix2, translation: Ve
         math(`P=${canonicalData.pTex}`),
       ], 'Después de eliminar la traslación, queda la forma real de Jordan de A.'),
       section('referencia-adaptada', 'Paso 5', 'Elegir la referencia adaptada', [
-        referenceBlock(origin, canonicalData.P),
+        referenceBlock(origin, canonicalData.P, canonicalData.pTex),
       ], 'La referencia nueva combina el origen elegido y la base lineal adaptada.'),
       section('comprobacion-homogenea', 'Paso 6', 'Comprobar la matriz homogénea canónica', [
-        ...affineHomogeneousVerificationBlocks(linearPart, translation, origin, canonicalData.P),
-        ...affineNormalFacts(analysis),
+        ...affineHomogeneousVerificationBlocks(linearPart, translation, origin, canonicalData.P, verificationBasisTex, verificationHomogeneousTex),
+        ...affineNormalFacts(analysis, canonicalData.canonicalTex, canonicalHomogeneousTex),
       ], 'La comprobación final usa el producto C^{-1}H_FC.'),
     ]
   }
@@ -789,16 +837,16 @@ function buildAffineNormalAlgorithmSections(linearPart: Matrix2, translation: Ve
 
     return [
       section('traslacion-residual', 'Paso 3', 'Separar la traslación residual', [
-        paragraph('Como A = I, se tiene im(A-I) = {0}. Ninguna parte de t puede absorberse cambiando el origen, así que toda la traslación es residual.'),
-        math(`b_1=${vectorTex({ x: 0, y: 0 })},\\qquad b_2=t=${vectorTex(translation)}`),
+        paragraph('Como A = I, se tiene im(I-A) = {0}. Ninguna parte de b puede absorberse cambiando el origen, así que toda la traslación es residual.'),
+        math(`b_1=${vectorTex({ x: 0, y: 0 })},\\qquad b_2=b=${vectorTex(translation)}`),
       ], 'En una traslación pura no hay componente eliminable.'),
       section('absorber-traslacion', 'Paso 4', 'Absorber la parte eliminable', [
-        paragraph('Este paso no modifica la aplicación: al ser A-I = 0, no existe componente b1 dentro de im(A-I).'),
+        paragraph('Este paso no modifica la aplicación: al ser I-A = 0, no existe componente b1 dentro de im(I-A).'),
       ], 'La traslación no trivial queda entera para la normalización.'),
       section('referencia-adaptada', 'Paso 5', 'Elegir una base adaptada y normalizar', [
-        math(`v_1=t=${vectorTex(v1)},\\qquad v_2=${vectorTex(v2)},\\qquad P=[v_1\\ v_2]=${matrixTex(P)}`),
+        math(`p_1=b=${vectorTex(v1)},\\qquad p_2=${vectorTex(v2)},\\qquad P=[p_1\\ p_2]=${matrixTex(P)}`),
         paragraph('En esa base, la traslación queda normalizada como primera coordenada. No hace falta mover el origen.'),
-        math(`P^{-1}t=${vectorTex({ x: 1, y: 0 })}`),
+        math(`P^{-1}b=${vectorTex({ x: 1, y: 0 })}`),
         referenceBlock({ x: 0, y: 0 }, P),
       ], 'La base convierte la traslación en (1,0).'),
       section('comprobacion-homogenea', 'Paso 6', 'Comprobar la matriz homogénea canónica', [
@@ -824,21 +872,26 @@ function buildAffineNormalAlgorithmSections(linearPart: Matrix2, translation: Ve
     const yStar = s.y / (1 - other)
     const newOrigin = scaleVector(v2, yStar)
     const scaledV1 = scaleVector(v1, s.x)
+    const imageGenerator = scaleVector(v2, 1 - other)
+    const eliminableTranslation = scaleVector(v2, s.y)
+    const residualTranslation = scaledV1
     const adaptedBasis = matrixFromImages(scaledV1, v2)
 
     return [
       section('traslacion-residual', 'Paso 3', 'Separar la traslación residual', [
-        paragraph('Al pasar a una base propia, la componente sobre la dirección del autovalor 1 es residual; la componente transversal pertenece a im(A-I) y se podrá absorber.'),
-        math(`v_1=${vectorTex(v1)}\\ (\\lambda=1),\\qquad v_2=${vectorTex(v2)}\\ (\\lambda=${formatTexNumber(other)})`),
-        math(`P=[v_1\\ v_2]=${matrixTex(P)},\\qquad s=P^{-1}t=${vectorTex(s)}=(s_1,s_2)`),
+        paragraph('Al pasar a una base propia, el algoritmo separa b en una componente absorbible dentro de im(I-A) y una componente residual en W = ker(I-A).'),
+        math(`p_1=${vectorTex(v1)}\\ (\\lambda=1),\\qquad p_2=${vectorTex(v2)}\\ (\\lambda=${formatTexNumber(other)})`),
+        math(`\\operatorname{im}(I-A)=\\langle ${vectorTex(imageGenerator)}\\rangle=\\langle p_2\\rangle,\\qquad W=\\ker(I-A)=\\langle p_1\\rangle`),
+        math(`P=[p_1\\ p_2]=${matrixTex(P)},\\qquad s=P^{-1}b=${vectorTex(s)}=(s_1,s_2)`),
+        math(`b_1=s_2p_2=${vectorTex(eliminableTranslation)},\\qquad b_2=s_1p_1=${vectorTex(residualTranslation)}`),
       ], 'Este es el subcaso diagonalizable sin punto fijo del capítulo 7.'),
       section('absorber-traslacion', 'Paso 4', 'Absorber la parte eliminable', [
-        paragraph('La segunda coordenada se puede cancelar porque su autovalor no es 1. Desplazamos el origen en esa dirección.'),
-        math(`y_2^*=\\frac{s_2}{1-${formatTexNumber(other)}}=${formatTexNumber(yStar)},\\qquad O'=y_2^*v_2=${vectorTex(newOrigin)}`),
+        paragraph('La componente b1 se elimina desplazando el origen a una solución de (I-A)x0 = b1. La componente b2 queda como traslación residual.'),
+        math(`y_2^*=\\frac{s_2}{1-${formatTexNumber(other)}}=${formatTexNumber(yStar)},\\qquad x_0=y_2^*p_2=${vectorTex(newOrigin)}`),
       ], 'Sólo sobrevive la componente paralela al eje del autovalor 1.'),
       section('referencia-adaptada', 'Paso 5', 'Elegir una base adaptada y normalizar', [
-        paragraph('Reescalamos la dirección propia del autovalor 1 para que la traslación residual sea exactamente una unidad.'),
-        math(`P_{\\mathrm{ad}}=[s_1v_1\\ v_2]=${matrixTex(adaptedBasis)}`),
+        paragraph('Para que la traslación residual sea exactamente (1,0), tomamos como primer vector de la base la propia componente residual b2.'),
+        math(`p_1'=b_2=s_1p_1=${vectorTex(scaledV1)},\\qquad p_2'=p_2=${vectorTex(v2)},\\qquad P_{\\mathrm{ad}}=[p_1'\\ p_2']=${matrixTex(adaptedBasis)}`),
         referenceBlock(newOrigin, adaptedBasis),
       ], 'La forma queda (u1,u2) -> (u1+1, mu u2).'),
       section('comprobacion-homogenea', 'Paso 6', 'Comprobar la matriz homogénea canónica', [
@@ -857,21 +910,25 @@ function buildAffineNormalAlgorithmSections(linearPart: Matrix2, translation: Ve
     const newOrigin = scaleVector(generalized, -s.y)
     const scaledGeneralized = scaleVector(generalized, s.x)
     const scaledEigen = scaleVector(eigen, s.x)
+    const eliminableTranslation = scaleVector(eigen, s.y)
+    const residualTranslation = scaledGeneralized
     const adaptedBasis = matrixFromImages(scaledGeneralized, scaledEigen)
 
     return [
       section('traslacion-residual', 'Paso 3', 'Separar la traslación residual', [
-        paragraph('En el caso parabólico usamos la convención de Jordan inferior: primero el vector generalizado y después el autovector. La componente transversal queda como traslación residual.'),
-        math(`w=${vectorTex(generalized)},\\qquad v=${vectorTex(eigen)},\\qquad (A-I)w=v`),
-        math(`P=[w\\ v]=${matrixTex(P)},\\qquad s=P^{-1}t=${vectorTex(s)}=(s_1,s_2)`),
+        paragraph('En el caso parabólico usamos la convención de Jordan inferior: primero un vector generalizado y después el autovector. Aquí im(I-A) = ker(I-A), y elegimos como suplementario la dirección del vector generalizado.'),
+        math(`p_1=${vectorTex(generalized)},\\qquad p_2=${vectorTex(eigen)},\\qquad (A-I)p_1=p_2`),
+        math(`\\operatorname{im}(I-A)=\\ker(I-A)=\\langle p_2\\rangle,\\qquad W=\\langle p_1\\rangle`),
+        math(`P=[p_1\\ p_2]=${matrixTex(P)},\\qquad s=P^{-1}b=${vectorTex(s)}=(s_1,s_2)`),
+        math(`b_1=s_2p_2=${vectorTex(eliminableTranslation)},\\qquad b_2=s_1p_1=${vectorTex(residualTranslation)}`),
       ], 'La parte s1 es esencial y la parte s2 se absorberá desplazando el origen.'),
       section('absorber-traslacion', 'Paso 4', 'Absorber la parte eliminable', [
-        paragraph('El desplazamiento del origen elimina la componente no esencial s2 sin cambiar el bloque de Jordan.'),
-        math(`O'=-s_2w=${vectorTex(newOrigin)}`),
+        paragraph('La componente b1 se elimina buscando x0 con (I-A)x0 = b1. Como (I-A)p1 = -p2, basta mover el origen en la dirección del vector generalizado.'),
+        math(`x_0=-s_2p_1=${vectorTex(newOrigin)}`),
       ], 'Después del centrado queda sólo la traslación esencial.'),
       section('referencia-adaptada', 'Paso 5', 'Elegir una base adaptada y normalizar', [
-        paragraph('Se reescalan las dos direcciones por s1 para conservar el bloque de Jordan y normalizar la traslación residual.'),
-        math(`P_{\\mathrm{ad}}=[s_1w\\ s_1v]=${matrixTex(adaptedBasis)}`),
+        paragraph('Tomamos p1 igual a la traslación residual y p2 = (A-I)p1. Así se conserva el bloque de Jordan y la traslación queda normalizada.'),
+        math(`p_1'=b_2=s_1p_1=${vectorTex(scaledGeneralized)},\\qquad p_2'=(A-I)p_1'=s_1p_2=${vectorTex(scaledEigen)},\\qquad P_{\\mathrm{ad}}=[p_1'\\ p_2']=${matrixTex(adaptedBasis)}`),
         referenceBlock(newOrigin, adaptedBasis),
       ], 'La forma queda (u1,u2) -> (u1+1, u1+u2).'),
       section('comprobacion-homogenea', 'Paso 6', 'Comprobar la matriz homogénea canónica', [
@@ -885,6 +942,9 @@ function buildAffineNormalAlgorithmSections(linearPart: Matrix2, translation: Ve
   const linearDeterminant = determinant2(linearPart)
   const discriminant = linearTrace * linearTrace - 4 * linearDeterminant
   const canonicalData = buildLinearCanonicalData(linearPart, linearTrace, linearDeterminant, discriminant)
+  const canonicalHomogeneousTex = canonicalData.canonicalHomogeneousTex
+  const verificationBasisTex = canonicalData.hasSymbolicEntries ? canonicalData.pTex : undefined
+  const verificationHomogeneousTex = canonicalData.hasSymbolicEntries ? canonicalHomogeneousTex : undefined
 
   return [
     section('traslacion-residual', 'Paso 3', 'Separar la traslación residual', [
@@ -895,11 +955,11 @@ function buildAffineNormalAlgorithmSections(linearPart: Matrix2, translation: Ve
       ...canonicalData.basisChangeBlocks,
     ]),
     section('referencia-adaptada', 'Paso 5', 'Elegir la referencia adaptada', [
-      referenceBlock({ x: 0, y: 0 }, canonicalData.P),
+      referenceBlock({ x: 0, y: 0 }, canonicalData.P, canonicalData.pTex),
     ]),
     section('comprobacion-homogenea', 'Paso 6', 'Comprobar la matriz homogénea canónica', [
-      ...affineHomogeneousVerificationBlocks(linearPart, translation, { x: 0, y: 0 }, canonicalData.P),
-      ...affineNormalFacts(analysis),
+      ...affineHomogeneousVerificationBlocks(linearPart, translation, { x: 0, y: 0 }, canonicalData.P, verificationBasisTex, verificationHomogeneousTex),
+      ...affineNormalFacts(analysis, canonicalData.canonicalTex, canonicalHomogeneousTex),
     ]),
   ]
 }
@@ -924,6 +984,13 @@ export function buildAffineReportDocument(input: AffineReportInput): PrintableRe
   const analysis = input.affineAnalysis
   const linearPart = analysis.sourceLinearPart
   const translation = analysis.sourceTranslation
+  const displayTrace = trace2(linearPart)
+  const displayDeterminant = determinant2(linearPart)
+  const displayDiscriminant = displayTrace * displayTrace - 4 * displayDeterminant
+  const displayCanonicalData = buildLinearCanonicalData(linearPart, displayTrace, displayDeterminant, displayDiscriminant)
+  const canonicalTranslationIsZero = Math.abs(analysis.canonicalTranslation.x) < EPSILON && Math.abs(analysis.canonicalTranslation.y) < EPSILON
+  const canonicalHomogeneousTex = canonicalTranslationIsZero ? displayCanonicalData.canonicalHomogeneousTex : matrixTex(analysis.canonicalHomogeneous)
+
   return {
     kind: 'affine',
     title: 'Informe detallado de la clasificación afín en R²',
@@ -934,11 +1001,11 @@ export function buildAffineReportDocument(input: AffineReportInput): PrintableRe
       textFact('Caso afín', analysis.caseLabel),
       textFact('Conjunto fijo', analysis.fixedSet.label),
       mathFact('A', matrixTex(linearPart), true),
-      mathFact('H_{\\mathrm{can}}', matrixTex(analysis.canonicalHomogeneous), true),
+      mathFact('H_{\\mathrm{can}}', canonicalHomogeneousTex, true),
     ],
     sections: [
       section('separar', 'Paso 1', 'Separar la parte lineal y la traslación', [
-        paragraph('El algoritmo del capítulo 7 parte de una afinidad escrita como F(x)=Ax+t. Como aquí los datos llegan mediante tres puntos origen y sus imágenes, primero reconstruimos esa descomposición.'),
+        paragraph('El algoritmo del capítulo 7 parte de una afinidad escrita como F(x)=Ax+b. Como aquí los datos llegan mediante tres puntos origen y sus imágenes, primero reconstruimos esa descomposición.'),
         facts([
           mathFact('p0', vectorTex(input.affineSource.p0)),
           mathFact('p1', vectorTex(input.affineSource.p1)),
@@ -956,20 +1023,20 @@ export function buildAffineReportDocument(input: AffineReportInput): PrintableRe
           mathFact('Área geométrica', formatTexNumber(Math.abs(input.affineDraftArea) / 2)),
           textFact('Conclusión', 'Los tres puntos origen forman una referencia afín válida'),
         ]),
-        paragraph('Con las direcciones del triángulo origen y del triángulo imagen se reconstruye la parte lineal A. Luego se obtiene la traslación imponiendo F(p0) = q0.'),
+        paragraph('Con las direcciones del triángulo origen y del triángulo imagen se reconstruye la parte lineal A. Luego se obtiene la traslación b imponiendo F(p0) = q0.'),
         math(`S=[p_1-p_0\\ p_2-p_0]=${matrixTex(sourceFrame)},\\qquad T=[q_1-q_0\\ q_2-q_0]=${matrixTex(imageFrame)}`),
         ...inverseNarrativeBlocks(sourceFrame, 'S'),
         math(`A=TS^{-1}=${matrixTex(imageFrame)}\\cdot${matrixTex(inverseSource)}=${matrixTex(linearPart)}`),
-        math(`t=q_0-Ap_0=${vectorTex(input.affineImages.q0)}-${matrixTex(linearPart)}${vectorTex(input.affineSource.p0)}=${vectorTex(translation)}`),
+        math(`b=q_0-Ap_0=${vectorTex(input.affineImages.q0)}-${matrixTex(linearPart)}${vectorTex(input.affineSource.p0)}=${vectorTex(translation)}`),
         math(`H_F=${matrixTex(analysis.sourceHomogeneous)}`),
-      ], 'Quedan fijados A, t y la matriz homogénea inicial H_F.'),
+      ], 'Quedan fijados A, b y la matriz homogénea inicial H_F.'),
       section('puntos-fijos', 'Paso 2', 'Resolver la ecuación de puntos fijos', buildAffineClassificationBlocks(linearPart, translation, input), 'Este paso decide si la traslación puede eliminarse poniendo el origen en un punto fijo.'),
       ...buildAffineNormalAlgorithmSections(linearPart, translation, analysis),
       section('resumen', 'Resumen', 'Resumen', [
         paragraph('Si se leen juntos los pasos anteriores, el proceso completo se resume así:'),
         list([
-          'Separar la parte lineal y la traslación: reconstruir A, t y H_F.',
-          'Resolver la ecuación de puntos fijos (A-I)c=-t.',
+          'Separar la parte lineal y la traslación: reconstruir A, b y H_F.',
+          'Resolver la ecuación de puntos fijos (I-A)x=b.',
           'Si hay punto fijo, trasladar el origen a una solución; si no lo hay, separar la traslación residual.',
           'Absorber la parte eliminable de la traslación o reducir la parte lineal que queda.',
           'Elegir una referencia afín adaptada y normalizar los parámetros esenciales.',
@@ -979,8 +1046,8 @@ export function buildAffineReportDocument(input: AffineReportInput): PrintableRe
     ],
     closingFacts: [
       mathFact('A', matrixTex(linearPart), true),
-      mathFact('t', vectorTex(translation)),
-      mathFact('H_{\\mathrm{can}}', matrixTex(analysis.canonicalHomogeneous), true),
+      mathFact('b', vectorTex(translation)),
+      mathFact('H_{\\mathrm{can}}', canonicalHomogeneousTex, true),
     ],
   }
 }
