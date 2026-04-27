@@ -390,10 +390,10 @@ function isZeroMatrix(matrix: Matrix2) {
 
 export function classifyAffineFixedSet(linearPart: Matrix2, translation: Vec2): AffineFixedSet {
   const system: Matrix2 = [
-    [linearPart[0][0] - 1, linearPart[0][1]],
-    [linearPart[1][0], linearPart[1][1] - 1],
+    [1 - linearPart[0][0], -linearPart[0][1]],
+    [-linearPart[1][0], 1 - linearPart[1][1]],
   ]
-  const rhs = { x: -translation.x, y: -translation.y }
+  const rhs = translation
 
   const inverse = inverse2(system)
   if (inverse) {
@@ -524,11 +524,11 @@ export function canonicalizeAffineMap(
       canvasSubtitle,
       steps: [
         'Primero se reconstruye la parte lineal A a partir de los vectores del triángulo origen y del triángulo imagen.',
-        'Después se calcula la traslación t imponiendo que F(p0) sea q0.',
+        'Después se calcula la traslación b imponiendo que F(p0) sea q0.',
         fixedSet.kind === 'line'
           ? 'La ecuación de los puntos fijos es compatible indeterminada, así que los puntos fijos forman una recta afín.'
           : fixedSet.kind === 'plane'
-            ? 'La ecuación de los puntos fijos se satisface para cualquier c, así que todo el plano está formado por puntos fijos.'
+            ? 'La ecuación de los puntos fijos se satisface para cualquier x, así que todo el plano está formado por puntos fijos.'
             : 'La ecuación de los puntos fijos tiene una única solución, así que aparece un único punto fijo.',
         'Al trasladar el origen a un punto fijo, la traslación desaparece.',
         `A partir de ahí, la forma normal afín queda descrita por ${linearAnalysis.caseLabel.toLowerCase()}.`,

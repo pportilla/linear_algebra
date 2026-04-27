@@ -636,14 +636,14 @@ function buildAffineClassificationBlocks(
 
   if (analysis.fixedSet.kind === 'point' && analysis.fixedSet.point) {
     blocks.push(paragraph('El sistema tiene solución única, así que existe un punto fijo. En el paso siguiente se usará como nuevo origen para eliminar el término independiente.'))
-    blocks.push(math(`c=${vectorTex(analysis.fixedSet.point)}`))
+    blocks.push(math(`x_0=${vectorTex(analysis.fixedSet.point)}`))
     return blocks
   }
 
   if (analysis.fixedSet.kind === 'line' && analysis.fixedSet.anchor && analysis.fixedSet.direction) {
     blocks.push(paragraph('El sistema es compatible indeterminado. No aparece un único punto fijo, sino una recta afín completa; el paso siguiente permite elegir cualquiera de sus puntos como origen.'))
     blocks.push(
-      math(`c=${vectorTex(analysis.fixedSet.anchor)}+s\\,${vectorTex(analysis.fixedSet.direction)}`),
+      math(`x=${vectorTex(analysis.fixedSet.anchor)}+s\\,${vectorTex(analysis.fixedSet.direction)}`),
     )
     return blocks
   }
@@ -800,20 +800,20 @@ function buildAffineNormalAlgorithmSections(linearPart: Matrix2, translation: Ve
 
     if (analysis.fixedSet.kind === 'point' && analysis.fixedSet.point) {
       fixedBlocks.push(paragraph('Aquí el sistema tiene solución única, así que el origen adaptado es ese punto fijo.'))
-      fixedBlocks.push(math(`c_0=${vectorTex(analysis.fixedSet.point)}`))
+      fixedBlocks.push(math(`x_0=${vectorTex(analysis.fixedSet.point)}`))
     } else if (analysis.fixedSet.kind === 'line' && analysis.fixedSet.anchor && analysis.fixedSet.direction) {
       fixedBlocks.push(paragraph('Aquí el sistema es compatible indeterminado: los puntos fijos forman una recta. El algoritmo permite tomar cualquier punto de esa recta como origen.'))
-      fixedBlocks.push(math(`c=${vectorTex(analysis.fixedSet.anchor)}+s\\,${vectorTex(analysis.fixedSet.direction)},\\qquad c_0=${vectorTex(origin)}`))
+      fixedBlocks.push(math(`x=${vectorTex(analysis.fixedSet.anchor)}+s\\,${vectorTex(analysis.fixedSet.direction)},\\qquad x_0=${vectorTex(origin)}`))
     } else {
       fixedBlocks.push(paragraph('Aquí todo punto es fijo. Tomamos el origen canónico como punto fijo elegido para mantener la referencia lo más simple posible.'))
-      fixedBlocks.push(math(`c_0=${vectorTex(origin)}`))
+      fixedBlocks.push(math(`x_0=${vectorTex(origin)}`))
     }
 
     return [
       section('eliminar-traslacion', 'Paso 3', 'Si hay punto fijo, eliminar la traslación', [
         ...fixedBlocks,
-        paragraph('Con el cambio de coordenadas z = x - c0, la traslación desaparece y la clasificación afín se reduce a la parte lineal.'),
-        math('\\tau_{-c_0}\\circ F\\circ\\tau_{c_0}(z)=Az'),
+        paragraph('Con el cambio de coordenadas z = x - x0, la traslación desaparece y la clasificación afín se reduce a la parte lineal.'),
+        math('\\tau_{-x_0}\\circ F\\circ\\tau_{x_0}(z)=Az'),
       ], 'El caso compatible se centra en un punto fijo.'),
       section('reducir-lineal', 'Paso 4', 'Reducir la parte lineal', [
         ...canonicalData.classificationBlocks,

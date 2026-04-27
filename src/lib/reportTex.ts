@@ -656,11 +656,11 @@ Aquí $\\det(I-A)=0$, pero el sistema es compatible indeterminado. El conjunto d
 \\[
 x=${vecToLatex(fixedSet.anchor)}+r\\,${vecToLatex(fixedSet.direction)},\\qquad r\\in\\mathbb R.
 \\]
-Siguiendo el algoritmo, basta escoger un punto de esa recta como nuevo origen; tomamos $c_0=${vecToLatex(chosenOrigin)}$.
+Siguiendo el algoritmo, basta escoger un punto de esa recta como nuevo origen; tomamos $x_0=${vecToLatex(chosenOrigin)}$.
 `
   } else {
     fixedSetExplanation = `
-En este caso $A=I$ y $b=0$, así que la ecuación de puntos fijos se satisface para todo $x\\in\\mathbb R^2$. Elegimos $c_0=${vecToLatex(chosenOrigin)}$ como origen adaptado.
+En este caso $A=I$ y $b=0$, así que la ecuación de puntos fijos se satisface para todo $x\\in\\mathbb R^2$. Elegimos $x_0=${vecToLatex(chosenOrigin)}$ como origen adaptado.
 `
   }
 
@@ -673,9 +673,9 @@ I-A=${matrixToLatex(iMinusA)},\\qquad b=${vecToLatex(translation)},\\qquad \\det
 ${fixedSetExplanation}
 
 \\subsection*{Paso 3. Si hay punto fijo, eliminar la traslación}
-Al trasladar el origen a $c_0=${vecToLatex(chosenOrigin)}$, la aplicación se convierte en
+Al trasladar el origen a $x_0=${vecToLatex(chosenOrigin)}$, la aplicación se convierte en
 \\[
-\\tau_{-c_0}\\circ F\\circ\\tau_{c_0}(z)=Az,
+\\tau_{-x_0}\\circ F\\circ\\tau_{x_0}(z)=Az,
 \\]
 es decir, la traslación desaparece. Este es exactamente el caso compatible del algoritmo: después de elegir un punto fijo como origen, sólo queda reducir la parte lineal.
 
@@ -686,7 +686,7 @@ ${linearVerification}
 \\subsection*{Paso 5. Escribir la referencia afín adaptada}
 La referencia afín en la que $F$ adopta su forma normal es
 \\[
-\\mathcal R=(c_0,P),\\qquad c_0=${vecToLatex(chosenOrigin)},\\qquad P=${canonical.pTex}.
+\\mathcal R=(x_0,P),\\qquad x_0=${vecToLatex(chosenOrigin)},\\qquad P=${canonical.pTex}.
 \\]
 En esa referencia la traslación es nula y la parte lineal es $${symbolJ}$.
 
@@ -733,7 +733,7 @@ y la aplicación actúa por
 \\subsection*{Paso 6. Escribir y comprobar la matriz homogénea canónica}
 En una traslación pura no hace falta mover el origen. Si se cambia el origen en un vector $u$, el nuevo término independiente sería
 \\[
-b+(A-I)u=b+(I-I)u=b,
+b-(I-A)u=b-0=b,
 \\]
 de modo que el vector de traslación no cambia. Por eso podemos conservar el origen actual y modificar sólo la base:
 \\[

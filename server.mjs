@@ -511,10 +511,10 @@ function isZeroMatrix(matrix) {
 
 function classifyAffineFixedSet(linearPart, translation) {
   const system = [
-    [linearPart[0][0] - 1, linearPart[0][1]],
-    [linearPart[1][0], linearPart[1][1] - 1],
+    [1 - linearPart[0][0], -linearPart[0][1]],
+    [-linearPart[1][0], 1 - linearPart[1][1]],
   ]
-  const rhs = { x: -translation.x, y: -translation.y }
+  const rhs = translation
   const inverse = inverse2(system)
 
   if (inverse) {
@@ -575,7 +575,7 @@ function classifyAffine(source, image) {
       details: [
         'La parte lineal se obtiene comparando los vectores definidos por los puntos origen con los de sus imágenes.',
         'La traslación se recupera imponiendo que F(p0)=q0.',
-        'El sistema (A-I)c=-t es compatible, así que se escoge una solución como nuevo origen.',
+        'El sistema (I-A)x=b es compatible, así que se escoge una solución como nuevo origen.',
         'Tras mover el origen a ese punto fijo elegido, la clasificación afín se reduce a la lineal.',
       ],
     }
@@ -618,6 +618,17 @@ function matrixMinusScalar(matrix, scalar) {
     [matrix[0][0] - scalar, matrix[0][1]],
     [matrix[1][0], matrix[1][1] - scalar],
   ]
+}
+
+function identityMinusMatrix(matrix) {
+  return [
+    [1 - matrix[0][0], -matrix[0][1]],
+    [-matrix[1][0], 1 - matrix[1][1]],
+  ]
+}
+
+function scaleVector(vector, scalar) {
+  return { x: scalar * vector.x, y: scalar * vector.y }
 }
 
 function kernelVectorOfSingular(matrix) {
@@ -732,8 +743,8 @@ function matrixToLatex3x3(M) {
   return `\\begin{pmatrix}${M[0].map(formatNumber).join(' & ')}\\\\${M[1].map(formatNumber).join(' & ')}\\\\${M[2].map(formatNumber).join(' & ')}\\end{pmatrix}`
 }
 
-function homogeneousLinearBlockToLatex(linearTex) {
-  return `\\begin{pmatrix}1&0\\\\0&${linearTex}\\end{pmatrix}`
+function expressionHomogeneousLinearToLatex(matrix) {
+  return `\\begin{pmatrix}1 & 0 & 0\\\\0 & ${formatLatexExpression(matrix[0][0])} & ${formatLatexExpression(matrix[0][1])}\\\\0 & ${formatLatexExpression(matrix[1][0])} & ${formatLatexExpression(matrix[1][1])}\\end{pmatrix}`
 }
 
 function multiplyMatrices3(left, right) {
@@ -839,7 +850,8 @@ function buildLinearCanonical(matrix, analysis) {
     const symbolicV1 = symbolicDistinctRealEigenvector(matrix, symbolicEigenvalues.lambda1, analysis.lambda1)
     const symbolicV2 = symbolicDistinctRealEigenvector(matrix, symbolicEigenvalues.lambda2, analysis.lambda2)
     const pTex = expressionMatrixToLatex([[symbolicV1[0], symbolicV2[0]], [symbolicV1[1], symbolicV2[1]]])
-    const canonicalTex = expressionMatrixToLatex([[symbolicEigenvalues.lambda1, symbolicNumber(0)], [symbolicNumber(0), symbolicEigenvalues.lambda2]])
+    const canonicalEntries = [[symbolicEigenvalues.lambda1, symbolicNumber(0)], [symbolicNumber(0), symbolicEigenvalues.lambda2]]
+    const canonicalTex = expressionMatrixToLatex(canonicalEntries)
     const body = `
 Tenemos dos autovalores reales distintos, $\\lambda_1=${formatLatexExpression(symbolicEigenvalues.lambda1)}$ y $\\lambda_2=${formatLatexExpression(symbolicEigenvalues.lambda2)}$. Para cada uno buscamos un autovector resolviendo $(A-\\lambda_i I)\\,v=0$:
 \\[
@@ -853,7 +865,7 @@ Colocando los autovectores como columnas obtenemos $P=[\\,v_1\\ v_2\\,]=${pTex}$
 J=${canonicalTex}.
 \\]
 `
-    return { v1, v2, P, canonical: analysis.canonicalMatrix, pTex, canonicalTex, homogeneousTex: homogeneousLinearBlockToLatex(canonicalTex), hasSymbolicEntries: true, body }
+    return { v1, v2, P, canonical: analysis.canonicalMatrix, pTex, canonicalTex, homogeneousTex: expressionHomogeneousLinearToLatex(canonicalEntries), hasSymbolicEntries: true, body }
   }
 
   if (analysis.caseId === 'scalar') {
@@ -912,7 +924,8 @@ J=${matrixToLatex(analysis.canonicalMatrix)}.
   const symbolicParts = symbolicComplexEigenParts(analysis.trace, analysis.discriminant)
   const symbolicBasis = symbolicComplexEigenBasis(matrix, symbolicParts.realPart, symbolicParts.imaginaryPart)
   const pTex = expressionMatrixToLatex([[symbolicBasis.v[0], symbolicBasis.u[0]], [symbolicBasis.v[1], symbolicBasis.u[1]]])
-  const canonicalTex = expressionMatrixToLatex([[symbolicParts.realPart, negateExpression(symbolicParts.imaginaryPart)], [symbolicParts.imaginaryPart, symbolicParts.realPart]])
+  const canonicalEntries = [[symbolicParts.realPart, negateExpression(symbolicParts.imaginaryPart)], [symbolicParts.imaginaryPart, symbolicParts.realPart]]
+  const canonicalTex = expressionMatrixToLatex(canonicalEntries)
   return {
     v1: v,
     v2: u,
@@ -920,7 +933,7 @@ J=${matrixToLatex(analysis.canonicalMatrix)}.
     canonical: analysis.canonicalMatrix,
     pTex,
     canonicalTex,
-    homogeneousTex: homogeneousLinearBlockToLatex(canonicalTex),
+    homogeneousTex: expressionHomogeneousLinearToLatex(canonicalEntries),
     hasSymbolicEntries: true,
     body: `
 Los autovalores son complejos conjugados, $\\lambda_{\\pm}=${formatLatexExpression(symbolicParts.realPart)}\\pm ${formatLatexExpression(symbolicParts.imaginaryPart)}\\,i$. Buscamos un autovector complejo de $\\lambda_+$ y lo descomponemos en parte real e imaginaria:
@@ -1210,9 +1223,8 @@ function fixedSetChosenOrigin(fixedSet) {
 }
 
 function buildAffineCaseWithFixedSet(linearPart, translation, fixedSet, analysis) {
-  const aMinusI = matrixMinusScalar(linearPart, 1)
-  const det = determinant2(aMinusI)
-  const rhs = { x: -translation.x, y: -translation.y }
+  const iMinusA = identityMinusMatrix(linearPart)
+  const det = determinant2(iMinusA)
   const chosenOrigin = fixedSetChosenOrigin(fixedSet)
   const canonical = buildLinearCanonical(linearPart, analysis)
   const invP = inverse2(canonical.P)
@@ -1242,37 +1254,37 @@ P^{-1}AP=${matrixToLatex(verification)}=${canonical.canonicalTex}=${symbolJ}.
 
   if (fixedSet.kind === 'point' && fixedSet.point) {
     fixedSetExplanation = `
-Como $\\det(A-I)\\neq 0$, el sistema tiene solución única:
+Como $\\det(I-A)\\neq 0$, el sistema tiene solución única:
 \\[
-c=(A-I)^{-1}(-t)=${vecToLatex(fixedSet.point)}.
+x_0=(I-A)^{-1}b=${vecToLatex(fixedSet.point)}.
 \\]
 `
   } else if (fixedSet.kind === 'line' && fixedSet.anchor && fixedSet.direction) {
     fixedSetExplanation = `
-Aquí $\\det(A-I)=0$, pero el sistema es compatible indeterminado. El conjunto de puntos fijos es la recta
+Aquí $\\det(I-A)=0$, pero el sistema es compatible indeterminado. El conjunto de puntos fijos es la recta
 \\[
-c=${vecToLatex(fixedSet.anchor)}+r\\,${vecToLatex(fixedSet.direction)},\\qquad r\\in\\mathbb R.
+x=${vecToLatex(fixedSet.anchor)}+r\\,${vecToLatex(fixedSet.direction)},\\qquad r\\in\\mathbb R.
 \\]
-Siguiendo el algoritmo, basta escoger un punto de esa recta como nuevo origen; tomamos $c_0=${vecToLatex(chosenOrigin)}$.
+Siguiendo el algoritmo, basta escoger un punto de esa recta como nuevo origen; tomamos $x_0=${vecToLatex(chosenOrigin)}$.
 `
   } else {
     fixedSetExplanation = `
-En este caso $A=I$ y $t=0$, así que la ecuación de puntos fijos se satisface para todo $c\\in\\mathbb R^2$. Elegimos $c_0=${vecToLatex(chosenOrigin)}$ como origen adaptado.
+En este caso $A=I$ y $b=0$, así que la ecuación de puntos fijos se satisface para todo $x\\in\\mathbb R^2$. Elegimos $x_0=${vecToLatex(chosenOrigin)}$ como origen adaptado.
 `
   }
 
   return `
 \\subsection*{Paso 2. Resolver la ecuación de puntos fijos}
-Se plantea $F(c)=c$, es decir, $Ac+t=c$, o equivalentemente $(A-I)c=-t$:
+Se plantea $F(x)=x$, es decir, $Ax+b=x$, o equivalentemente $(I-A)x=b$:
 \\[
-A-I=${matrixToLatex(aMinusI)},\\qquad -t=${vecToLatex(rhs)},\\qquad \\det(A-I)=${formatNumber(det)}.
+I-A=${matrixToLatex(iMinusA)},\\qquad b=${vecToLatex(translation)},\\qquad \\det(I-A)=${formatNumber(det)}.
 \\]
 ${fixedSetExplanation}
 
 \\subsection*{Paso 3. Si hay punto fijo, eliminar la traslación}
-Al trasladar el origen a $c_0=${vecToLatex(chosenOrigin)}$, la aplicación se convierte en
+Al trasladar el origen a $x_0=${vecToLatex(chosenOrigin)}$, la aplicación se convierte en
 \\[
-\\tilde F(y)=F(y+c_0)-c_0=Ay,
+\\tau_{-x_0}\\circ F\\circ\\tau_{x_0}(z)=Az,
 \\]
 es decir, la traslación desaparece. Este es exactamente el caso compatible del algoritmo: después de elegir un punto fijo como origen, sólo queda reducir la parte lineal.
 
@@ -1283,7 +1295,7 @@ ${linearVerification}
 \\subsection*{Paso 5. Escribir la referencia afín adaptada}
 La referencia afín en la que $F$ adopta su forma normal es
 \\[
-\\mathcal R=(c_0,P),\\qquad c_0=${vecToLatex(chosenOrigin)},\\qquad P=${canonical.pTex}.
+\\mathcal R=(x_0,P),\\qquad x_0=${vecToLatex(chosenOrigin)},\\qquad P=${canonical.pTex}.
 \\]
 En esa referencia la traslación es nula y la parte lineal es $${symbolJ}$.
 
@@ -1304,22 +1316,22 @@ function buildAffineCaseTranslation(translation) {
   const P = matrixFromColumns(v1, v2)
   return `
 \\subsection*{Paso 2. Resolver la ecuación de puntos fijos}
-Aquí $A=I$, de modo que $A-I=0$ y la ecuación $(A-I)c=-t$ se reduce a $0=-t$. Como $t\\neq 0$, no hay punto fijo: $F$ es una traslación pura.
+Aquí $A=I$, de modo que $I-A=0$ y la ecuación $(I-A)x=b$ se reduce a $0=b$. Como $b\\neq 0$, no hay punto fijo: $F$ es una traslación pura.
 
 \\subsection*{Paso 3. Separar la traslación residual}
-Como $\\operatorname{im}(A-I)=\\{0\\}$, ninguna parte de $t$ puede absorberse cambiando el origen. En la notación del capítulo, $b_1=0$ y $b_2=t$.
+Como $\\operatorname{im}(I-A)=\\{0\\}$, ninguna parte de $b$ puede absorberse cambiando el origen. En la notación del capítulo, $b_1=0$ y $b_2=b=${vecToLatex(translation)}$.
 
 \\subsection*{Paso 4. Absorber la parte eliminable de la traslación}
-Este paso no modifica nada en una traslación pura: no hay componente eliminable porque $A-I=0$.
+Este paso no modifica nada en una traslación pura: no hay componente eliminable porque $I-A=0$.
 
 \\subsection*{Paso 5. Elegir una base adaptada y normalizar}
 Puesto que la parte lineal es la identidad, en cualquier base la aplicación sigue siendo una suma por el mismo vector. Para que esa suma quede lo más simple posible, se toma como primer vector de la base la propia dirección de la traslación y como segundo un vector no paralelo:
 \\[
-v_1=t=${vecToLatex(translation)},\\qquad v_2=${vecToLatex(v2)},\\qquad P=[v_1\\ v_2]=${matrixToLatex(P)}.
+p_1=b=${vecToLatex(translation)},\\qquad p_2=${vecToLatex(v2)},\\qquad P=[p_1\\ p_2]=${matrixToLatex(P)}.
 \\]
 Con esta elección, el vector de traslación coincide exactamente con el primer vector de la base. Por eso, en las coordenadas $y=P^{-1}x$ se tiene
 \\[
-P^{-1}t=${vecToLatex({ x: 1, y: 0 })},
+P^{-1}b=${vecToLatex({ x: 1, y: 0 })},
 \\]
 y la aplicación actúa por
 \\[
@@ -1329,7 +1341,7 @@ y la aplicación actúa por
 \\subsection*{Paso 6. Escribir y comprobar la matriz homogénea canónica}
 En una traslación pura no hace falta mover el origen. Si se cambia el origen en un vector $u$, el nuevo término independiente sería
 \\[
-t+(A-I)u=t+(I-I)u=t,
+b-(I-A)u=b-0=b,
 \\]
 de modo que el vector de traslación no cambia. Por eso podemos conservar el origen actual y modificar sólo la base:
 \\[
@@ -1353,53 +1365,68 @@ function buildAffineCaseDistinctOneIsEigenvalue(linearPart, translation, analysi
   const yStar = s.y / (1 - other)
   const newOrigin = { x: yStar * v2.x, y: yStar * v2.y }
   const scaledV1 = { x: s.x * v1.x, y: s.x * v1.y }
+  const eliminableTranslation = scaleVector(v2, s.y)
+  const residualTranslation = scaledV1
+  const imageGenerator = scaleVector(v2, 1 - other)
   const scaledP = matrixFromColumns(scaledV1, v2)
   const canonical = [[1, 0], [0, other]]
   return `
 \\subsection*{Paso 2. Resolver la ecuación de puntos fijos}
-Uno de los autovalores de $A$ es $1$, por lo que $A-I$ es singular:
+Uno de los autovalores de $A$ es $1$, por lo que $I-A$ es singular:
 \\[
-A-I=${matrixToLatex(matrixMinusScalar(linearPart, 1))},\\qquad \\det(A-I)=0.
+I-A=${matrixToLatex(identityMinusMatrix(linearPart))},\\qquad \\det(I-A)=0.
 \\]
-El sistema $(A-I)c=-t$ sólo tiene solución si la componente de $-t$ a lo largo de $v_1$ (el autovector de $\\lambda=1$) es nula. Aquí no lo es, luego no hay punto fijo.
+El sistema $(I-A)x=b$ es incompatible: la componente residual de $b$ en la dirección de $\\ker(I-A)$ no se puede absorber. Luego no hay punto fijo.
 
 \\subsection*{Paso 3. Separar la traslación residual}
-Autovectores (uno por cada autovalor):
+Como no hay punto fijo, seguimos la descomposición del algoritmo. Tomamos la base propia
 \\[
-v_1=${vecToLatex(v1)}\\ (\\lambda=1),
+p_1=${vecToLatex(v1)}\\ (\\lambda=1),
 \\qquad
-v_2=${vecToLatex(v2)}\\ (\\lambda=${formatNumber(other)}).
+p_2=${vecToLatex(v2)}\\ (\\lambda=${formatNumber(other)}).
 \\]
-Con $P=[v_1\\ v_2]=${matrixToLatex(P)}$, las coordenadas $y=P^{-1}x$ diagonalizan $A$. La traslación en esas coordenadas es
+En este subcaso $W=\\ker(I-A)$ es un suplementario natural de $\\operatorname{im}(I-A)$:
 \\[
-s=P^{-1}t=${vecToLatex(s)}=(s_1,s_2).
+\\operatorname{im}(I-A)=\\langle ${vecToLatex(imageGenerator)}\\rangle=\\langle p_2\\rangle,
+\\qquad
+W=\\ker(I-A)=\\langle p_1\\rangle.
 \\]
-En esta base, la componente $s_2v_2$ está en $\\operatorname{im}(A-I)$ y se puede absorber; la componente $s_1v_1$ es la traslación residual paralela a $\\ker(A-I)$.
+Con $P=[p_1\\ p_2]=${matrixToLatex(P)}$, la traslación se descompone como
+\\[
+s=P^{-1}b=${vecToLatex(s)}=(s_1,s_2),
+\\qquad
+b_1=s_2p_2=${vecToLatex(eliminableTranslation)},\\qquad b_2=s_1p_1=${vecToLatex(residualTranslation)}.
+\\]
+La componente $b_1$ está en $\\operatorname{im}(I-A)$ y se puede absorber; la componente $b_2$ queda como traslación residual. Como no hay punto fijo, $b_2\\neq0$.
 En ellas $F$ actúa como
 \\[
 (y_1,y_2)\\longmapsto (y_1+s_1,\\ ${formatNumber(other)}\\,y_2+s_2).
 \\]
 
 \\subsection*{Paso 4. Absorber la parte eliminable de la traslación}
-En la segunda coordenada el factor $\\lambda_2=${formatNumber(other)}\\neq 1$ permite cancelar la traslación desplazando el origen a
+Buscamos $x_0$ tal que $(I-A)x_0=b_1$. En la dirección $p_2$ basta tomar
 \\[
-y_2^{*}=\\frac{s_2}{1-\\lambda_2}=${formatNumber(yStar)}.
+y_2^{*}=\\frac{s_2}{1-${formatNumber(other)}}=${formatNumber(yStar)}.
 \\]
 En coordenadas originales esto equivale a tomar como nuevo origen
 \\[
-O'=y_2^{*}\\,v_2=${vecToLatex(newOrigin)}.
+x_0=y_2^{*}\\,p_2=${vecToLatex(newOrigin)}.
 \\]
-Con el origen movido a $O'$ queda $(z_1,z_2)\\mapsto(z_1+s_1,\\ ${formatNumber(other)}\\,z_2)$.
+Con el origen movido a $x_0$ queda $F_1(z)=Az+b_2$.
 
 \\subsection*{Paso 5. Elegir una base adaptada y normalizar}
-Para llevar la traslación residual a $1$, se reescala la primera coordenada ($w_1=z_1/s_1$), lo que equivale a sustituir $v_1$ por $s_1 v_1=${vecToLatex(scaledV1)}$. Con ello $F$ adopta la forma canónica
+Para que la traslación residual sea exactamente $(1,0)$, tomamos como primer vector de la base $b_2$:
+\\[
+p_1'=b_2=s_1p_1=${vecToLatex(scaledV1)},\\qquad p_2'=p_2=${vecToLatex(v2)}.
+\\]
+Con ello $F$ adopta la forma canónica
 \\[
 (w_1,w_2)\\longmapsto (w_1+1,\\ ${formatNumber(other)}\\,w_2).
 \\]
 
 \\subsection*{Paso 6. Escribir y comprobar la matriz homogénea canónica}
 \\[
-\\mathcal R=(${vecToLatex(newOrigin)},(${vecToLatex(scaledV1)},${vecToLatex(v2)})).
+\\mathcal R'=(x_0,(p_1',p_2'))=(${vecToLatex(newOrigin)},(${vecToLatex(scaledV1)},${vecToLatex(v2)})).
 \\]
 ${affineHomogeneousVerificationLatex(linearPart, translation, newOrigin, scaledP)}
 Matriz homogénea de la forma normal afín:
@@ -1418,57 +1445,63 @@ function buildAffineCaseParabolic(linearPart, translation, analysis) {
   const newOrigin = { x: -s.y * generalized.x, y: -s.y * generalized.y }
   const scaledGeneralized = { x: s.x * generalized.x, y: s.x * generalized.y }
   const scaledEigen = { x: s.x * eigen.x, y: s.x * eigen.y }
+  const eliminableTranslation = scaleVector(eigen, s.y)
+  const residualTranslation = scaledGeneralized
   const scaledP = matrixFromColumns(scaledGeneralized, scaledEigen)
   const canonical = [[1, 0], [1, 1]]
   void analysis
   return `
 \\subsection*{Paso 2. Resolver la ecuación de puntos fijos}
-$A$ tiene autovalor doble $\\lambda=1$ con bloque de Jordan, de modo que $A-I\\neq 0$ pero $(A-I)^2=0$. El sistema $(A-I)c=-t$ sólo tiene solución cuando $-t\\in\\mathrm{im}(A-I)=\\ker(A-I)$. Aquí la componente transversal de $-t$ no es nula: no hay punto fijo.
+$A$ tiene autovalor doble $\\lambda=1$ con bloque de Jordan, de modo que $I-A\\neq 0$ pero $(I-A)^2=0$. El sistema $(I-A)x=b$ sólo tiene solución cuando $b\\in\\operatorname{im}(I-A)=\\ker(I-A)$. Aquí la componente transversal de $b$ no es nula: no hay punto fijo.
 
 \\subsection*{Paso 3. Separar la traslación residual}
-Autovector y vector generalizado para $\\lambda=1$:
+Usamos una cadena de Jordan. Escribimos primero un vector generalizado y después un autovector:
 \\[
-w=${vecToLatex(generalized)}\\ \\text{(generalizado)},
+p_1=${vecToLatex(generalized)}\\ \\text{(generalizado)},
 \\qquad
-v=${vecToLatex(eigen)}\\ \\text{(autovector)},\\qquad (A-I)w=v.
+p_2=${vecToLatex(eigen)}\\ \\text{(autovector)},\\qquad (A-I)p_1=p_2.
 \\]
-Con $P=[w\\ v]=${matrixToLatex(P)}$, $A$ queda en la convención de Jordan usada en la aplicación:
+Con $P=[p_1\\ p_2]=${matrixToLatex(P)}$, $A$ queda en la convención de Jordan usada en la aplicación:
 \\[
 P^{-1}AP=\\begin{pmatrix}1&0\\\\1&1\\end{pmatrix}.
 \\]
-La traslación en estas coordenadas es
+Aquí $\\operatorname{im}(I-A)=\\ker(I-A)=\\langle p_2\\rangle$. Tomamos como suplementario $W=\\langle p_1\\rangle$ y descomponemos la traslación mediante
 \\[
-s=P^{-1}t=${vecToLatex(s)}=(s_1,s_2).
+s=P^{-1}b=${vecToLatex(s)}=(s_1,s_2),
+\\qquad
+b_1=s_2p_2=${vecToLatex(eliminableTranslation)},\\qquad b_2=s_1p_1=${vecToLatex(residualTranslation)}.
 \\]
-En coordenadas de Jordan, la componente $s_2v$ está en $\\operatorname{im}(A-I)$ y es eliminable; la componente $s_1w$ queda como traslación residual.
+La componente $b_1$ está en $\\operatorname{im}(I-A)$ y es eliminable; $b_2$ queda como traslación residual. Como no hay punto fijo, $b_2\\neq0$.
 En ellas $F$ actúa como
 \\[
 (y_1,y_2)\\longmapsto (y_1+s_1,\\ y_1+y_2+s_2).
 \\]
 
 \\subsection*{Paso 4. Absorber la parte eliminable de la traslación}
-El término $s_2$ se elimina desplazando el origen en coordenadas de Jordan con $c_1=-s_2$ y $c_2=0$, es decir,
+Buscamos $x_0$ tal que $(I-A)x_0=b_1$. Como $(I-A)p_1=-p_2$, basta desplazar el origen a
 \\[
-O'=-s_2\\,w=${vecToLatex(newOrigin)}.
+x_0=-s_2\\,p_1=${vecToLatex(newOrigin)}.
 \\]
-En las nuevas coordenadas $z=y-c$ la aplicación queda
+En las nuevas coordenadas queda $F_1(z)=Az+b_2$, es decir,
 \\[
 (z_1,z_2)\\longmapsto (z_1+s_1,\\ z_1+z_2).
 \\]
 
 \\subsection*{Paso 5. Elegir una base adaptada y normalizar}
-Como no hay punto fijo, $s_1\\neq 0$. Se reescalan las dos coordenadas por el mismo factor para conservar el bloque de Jordan y convertir la traslación residual en $1$. La nueva base es
+Como no hay punto fijo, $s_1\\neq 0$. El algoritmo toma
 \\[
-(${vecToLatex(scaledGeneralized)},${vecToLatex(scaledEigen)})=(s_1w,s_1v).
+p_1'=b_2=s_1p_1=${vecToLatex(scaledGeneralized)},\\qquad
+p_2'=(A-I)p_1'=s_1p_2=${vecToLatex(scaledEigen)}.
 \\]
 Con ello se llega directamente a la forma parabólica normal
 \\[
-(u_1,u_2)\\longmapsto (u_1+1,\\ u_1+u_2).
+(u_1,u_2)\\longmapsto (u_1+1,\\ u_1+u_2),
 \\]
+que corresponde a la matriz lineal $\\begin{pmatrix}1&0\\\\1&1\\end{pmatrix}$ y a la traslación $(1,0)$.
 
 \\subsection*{Paso 6. Escribir y comprobar la matriz homogénea canónica}
 \\[
-\\mathcal R=(${vecToLatex(newOrigin)},(${vecToLatex(scaledGeneralized)},${vecToLatex(scaledEigen)})).
+\\mathcal R'=(x_0,(p_1',p_2'))=(${vecToLatex(newOrigin)},(${vecToLatex(scaledGeneralized)},${vecToLatex(scaledEigen)})).
 \\]
 ${affineHomogeneousVerificationLatex(linearPart, translation, newOrigin, scaledP)}
 Matriz homogénea de la forma normal afín:
@@ -1566,7 +1599,7 @@ function buildAffineTex(payload) {
 \\section*{Reducción afín en $\\mathbb R^2$: ${caseTitle}}
 
 \\subsection*{Paso 1. Separar la parte lineal y la traslación}
-El capítulo 7 empieza la reducción con una afinidad escrita como $F(x)=Ax+t$. Como aquí los datos se introducen mediante una referencia afín y sus imágenes, primero reconstruimos esa descomposición.
+El capítulo 7 empieza la reducción con una afinidad escrita como $F(x)=Ax+b$. Como aquí los datos se introducen mediante una referencia afín y sus imágenes, primero reconstruimos esa descomposición.
 
 \\paragraph{Datos de partida.}
 Se toman tres puntos
@@ -1602,9 +1635,9 @@ A=TS^{-1}=${matrixToLatex(imageFrame)}\\cdot${matrixToLatex(inverseSource)}=${ma
 \\paragraph{Traslación.}
 Imponiendo $F(p_0)=q_0$,
 \\[
-t=q_0-Ap_0=${vecToLatex(payload.image.q0)}-${matrixToLatex(linearPart)}${vecToLatex(payload.source.p0)}=${vecToLatex(translation)}.
+b=q_0-Ap_0=${vecToLatex(payload.image.q0)}-${matrixToLatex(linearPart)}${vecToLatex(payload.source.p0)}=${vecToLatex(translation)}.
 \\]
-Por tanto, $F(x)=Ax+t$.
+Por tanto, $F(x)=Ax+b$.
 
 \\paragraph{Matriz homogénea inicial.}
 \\[
@@ -1615,8 +1648,8 @@ ${caseBlock}
 
 \\subsection*{Resumen del algoritmo}
 \\begin{enumerate}
-\\item Separar la parte lineal y la traslación: reconstruir $A$, $t$ y $H_F$.
-\\item Resolver la ecuación de puntos fijos $(A-I)c=-t$.
+\\item Separar la parte lineal y la traslación: reconstruir $A$, $b$ y $H_F$.
+\\item Resolver la ecuación de puntos fijos $(I-A)x=b$.
 \\item Si hay punto fijo, trasladar el origen a una solución; si no lo hay, separar la traslación residual.
 \\item Absorber la parte eliminable de la traslación o reducir la parte lineal que queda.
 \\item Elegir una referencia afín adaptada y normalizar los parámetros esenciales.
