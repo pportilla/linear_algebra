@@ -27,7 +27,7 @@ The algorithm is:
    $$
    A=YB^{-1}.
    $$
-4. Compute $\operatorname{tr}(A)$, $\det(A)$, and the discriminant of the characteristic polynomial.
+4. Compute the trace of $A$, the determinant of $A$, and the discriminant of the characteristic polynomial.
 5. Classify the real canonical form:
    - two distinct real eigenvalues,
    - a scalar matrix,
