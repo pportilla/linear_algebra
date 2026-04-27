@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "author": "Pablo Portilla",
-  "license": "GPL-3.0-or-later",
+  "license": "GPL-3.0-only",
   "type": "module",
   "scripts": {
     "dev": "concurrently \"npm:dev:server\" \"npm:dev:client\"",
