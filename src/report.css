@@ -106,13 +106,20 @@ p {
 
 .report-badge,
 .report-section-eyebrow,
-.report-fact-label,
 .report-sidebar-title {
   color: var(--report-accent);
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.11em;
   text-transform: uppercase;
+}
+
+.report-fact-label {
+  color: var(--report-accent);
+  font-size: 0.86rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .report-subtitle,
@@ -229,8 +236,6 @@ p {
 }
 
 .report-fact-label.is-math {
-  letter-spacing: 0;
-  text-transform: none;
   font-size: 0.92rem;
 }
 
