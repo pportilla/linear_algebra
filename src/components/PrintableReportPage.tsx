@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import katex from 'katex'
 import type { PrintableReportDocument, ReportBlock, ReportFact } from '../lib/reportModels'
 
@@ -12,6 +12,26 @@ function renderMath(tex: string, displayMode = false) {
   }
 }
 
+function renderInlineMath(text: string): ReactNode[] {
+  const parts = text.split(/(\$[^$]+\$)/g)
+
+  return parts.map((part, index) => {
+    if (part.startsWith('$') && part.endsWith('$') && part.length > 2) {
+      const tex = part.slice(1, -1)
+
+      return (
+        <span
+          className="report-inline-math"
+          dangerouslySetInnerHTML={renderMath(tex)}
+          key={`${tex}-${index}`}
+        />
+      )
+    }
+
+    return part
+  })
+}
+
 function FactValue({ fact }: { fact: ReportFact }) {
   if (fact.valueType === 'math') {
     return (
@@ -22,7 +42,7 @@ function FactValue({ fact }: { fact: ReportFact }) {
     )
   }
 
-  return <p className="report-fact-value">{fact.value}</p>
+  return <p className="report-fact-value">{renderInlineMath(fact.value)}</p>
 }
 
 function FactLabel({ fact }: { fact: ReportFact }) {
@@ -30,7 +50,7 @@ function FactLabel({ fact }: { fact: ReportFact }) {
     return <p className="report-fact-label is-math" dangerouslySetInnerHTML={renderMath(fact.label)} />
   }
 
-  return <p className="report-fact-label">{fact.label}</p>
+  return <p className="report-fact-label">{renderInlineMath(fact.label)}</p>
 }
 
 function FactsGrid({ items }: { items: ReportFact[] }) {
@@ -48,7 +68,7 @@ function FactsGrid({ items }: { items: ReportFact[] }) {
 
 function ReportBlockView({ block }: { block: ReportBlock }) {
   if (block.type === 'paragraph') {
-    return <p className="report-paragraph">{block.text}</p>
+    return <p className="report-paragraph">{renderInlineMath(block.text)}</p>
   }
 
   if (block.type === 'math') {
@@ -65,13 +85,13 @@ function ReportBlockView({ block }: { block: ReportBlock }) {
     return (
       <ListTag className="report-list">
         {block.items.map((item) => (
-          <li key={item}>{item}</li>
+          <li key={item}>{renderInlineMath(item)}</li>
         ))}
       </ListTag>
     )
   }
 
-  return <div className={`report-note ${block.tone === 'warning' ? 'is-warning' : ''}`}>{block.text}</div>
+  return <div className={`report-note ${block.tone === 'warning' ? 'is-warning' : ''}`}>{renderInlineMath(block.text)}</div>
 }
 
 export function PrintableReportPage({ document }: { document: PrintableReportDocument }) {
@@ -162,7 +182,7 @@ export function PrintableReportPage({ document }: { document: PrintableReportDoc
               <div className="report-section-head">
                 {item.eyebrow ? <p className="report-section-eyebrow">{item.eyebrow}</p> : null}
                 <h2>{item.title}</h2>
-                {item.summary ? <p className="report-section-summary">{item.summary}</p> : null}
+                {item.summary ? <p className="report-section-summary">{renderInlineMath(item.summary)}</p> : null}
               </div>
 
               <div className="report-section-body">

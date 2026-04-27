@@ -1155,13 +1155,12 @@ ${verificationNarrative}
 
 \\subsection*{Resumen final}
 \\begin{enumerate}
-\\item Se comprueba que $b_1,b_2$ son base verificando $\\det(B)\\neq 0$.
-\\item Se construyen $B=[b_1\\ b_2]$ y $Y=[T(b_1)\\ T(b_2)]$.
-\\item Se calcula $B^{-1}$ de forma explícita.
-\\item Se obtiene $A=YB^{-1}$.
-\\item Se escribe el polinomio característico y se estudia su discriminante.
-\\item Según el caso, se calculan autovectores (y un vector generalizado si hay bloque de Jordan) y con ellos la matriz $P$.
-\\item Se verifica que $P^{-1}AP$ coincide con la forma canónica.
+\\item Se comprueba que $b_1,b_2$ forman una base mediante $\\det(B)\\neq 0$; así los datos determinan una única aplicación lineal.
+\\item Se ordenan los datos como $B=[b_1\\ b_2]$ y $Y=[T(b_1)\\ T(b_2)]$, lo que convierte el problema geométrico en $AB=Y$.
+\\item Se calcula $B^{-1}$ y se despeja $A=YB^{-1}$, obteniendo la matriz en la base estándar.
+\\item La traza, el determinante y el discriminante de $p_A$ deciden qué forma canónica corresponde.
+\\item La base adaptada se construye con autovectores; si aparece un bloque de Jordan, se añade un vector generalizado.
+\\item Se verifica $P^{-1}AP=J$ (o $J_{\\mathbb R}$ en el caso complejo), cerrando la reducción con una igualdad matricial explícita.
 \\end{enumerate}
 
 \\bigskip
@@ -1295,12 +1294,12 @@ ${caseBlock}
 
 \\subsection*{Resumen del algoritmo}
 \\begin{enumerate}
-\\item Separar la parte lineal y la traslación: reconstruir $A$, $b$ y $H_F$.
-\\item Resolver la ecuación de puntos fijos $(I-A)x=b$.
-\\item Si hay punto fijo, trasladar el origen a una solución; si no lo hay, separar la traslación residual.
-\\item Absorber la parte eliminable de la traslación o reducir la parte lineal que queda.
-\\item Elegir una referencia afín adaptada y normalizar los parámetros esenciales.
-\\item Comprobar la forma normal mediante $C^{-1}H_FC=H_{\\mathrm{can}}$.
+\\item Verificar que $p_0,p_1,p_2$ forman una referencia afín; el área orientada doble no debe anularse.
+\\item Reconstruir $F(x)=Ax+b$: las direcciones del triángulo dan $A=TS^{-1}$ y la condición $F(p_0)=q_0$ fija $b$.
+\\item Escribir $H_F$ para tratar parte lineal y traslación en una sola matriz homogénea.
+\\item Resolver $(I-A)x=b$ para decidir si se puede eliminar la traslación cambiando el origen; si no se puede, separar la parte residual de $b$.
+\\item Elegir una referencia afín adaptada: el origen absorbe lo eliminable y la base normaliza autovectores, bloques de Jordan o traslaciones esenciales.
+\\item Comprobar la forma normal mediante $C^{-1}H_FC=H_{\\mathrm{can}}$, que certifica la igualdad entre la afinidad original y su representante canónico.
 \\end{enumerate}
 \\end{document}
 `

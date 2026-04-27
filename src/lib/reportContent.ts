@@ -440,23 +440,23 @@ function invalidLinearDocument(input: LinearReportInput): PrintableReportDocumen
       section('datos', 'Datos', 'Vectores fijados', [
         paragraph('Antes de intentar ninguna cuenta, conviene mirar exactamente qué vectores se han fijado y cuáles son sus imágenes.'),
         facts([
-          mathFact('b1', vectorTex(input.linearPoints.b1)),
-          mathFact('b2', vectorTex(input.linearPoints.b2)),
-          mathFact('T(b1)', vectorTex(input.linearPoints.tb1)),
-          mathFact('T(b2)', vectorTex(input.linearPoints.tb2)),
+          mathFact('b_1', vectorTex(input.linearPoints.b1)),
+          mathFact('b_2', vectorTex(input.linearPoints.b2)),
+          mathFact('T(b_1)', vectorTex(input.linearPoints.tb1)),
+          mathFact('T(b_2)', vectorTex(input.linearPoints.tb2)),
         ]),
       ], 'Estos son los datos de partida sobre los que debería reconstruirse la aplicación.'),
       section('obstruccion', 'Diagnóstico', 'Por qué falla la reconstrucción', [
-        paragraph('La aplicación lineal sólo queda determinada de forma única cuando b1 y b2 forman una base de R². Si esos dos vectores están alineados, la información de partida no basta para distinguir una única matriz.'),
+        paragraph('La aplicación lineal sólo queda determinada de forma única cuando $b_1$ y $b_2$ forman una base de $\\mathbb R^2$. Si esos dos vectores están alineados, la información de partida no basta para distinguir una única matriz.'),
         math(`B=[b_1\\ b_2]=${matrixTex(basisMatrix)},\\qquad \\det(B)=${formatTexNumber(determinant)}`),
-        note('El determinante es nulo o numéricamente despreciable, de modo que B no es invertible y la ecuación AB = Y no permite despejar una única matriz A.', 'warning'),
-      ], 'Sin la inversa de B no se puede ejecutar el paso A = YB^{-1}.'),
+        note('El determinante es nulo o numéricamente despreciable, de modo que $B$ no es invertible y la ecuación $AB=Y$ no permite despejar una única matriz $A$.', 'warning'),
+      ], 'Sin la inversa de $B$ no se puede ejecutar el paso $A=YB^{-1}$.'),
       section('ajuste', 'Siguiente paso', 'Cómo corregirlo', [
         paragraph('La corrección es sencilla: hay que volver a elegir la base origen hasta que realmente genere todo el plano.'),
         list([
-          'Modifica b1 o b2 para que no queden alineados.',
-          'Comprueba que el determinante de la matriz [b1 b2] sea distinto de cero.',
-          'Una vez la base sea invertible, el informe mostrará automáticamente la matriz A, su polinomio característico y la forma canónica correspondiente.',
+          'Modifica $b_1$ o $b_2$ para que no queden alineados.',
+          'Comprueba que el determinante de la matriz $[b_1\\ b_2]$ sea distinto de cero.',
+          'Una vez la base sea invertible, el informe mostrará automáticamente la matriz $A$, su polinomio característico y la forma canónica correspondiente.',
         ]),
       ]),
     ],
@@ -495,55 +495,55 @@ export function buildLinearReportDocument(input: LinearReportInput): PrintableRe
     ],
     sections: [
       section('datos', 'Paso 1', 'Datos de partida', [
-        paragraph('Empezamos con una base de R² elegida por el usuario y con las imágenes que se han fijado para esos dos vectores. Toda la reconstrucción saldrá de relacionar esas cuatro columnas.'),
+        paragraph('Empezamos con una base de $\\mathbb R^2$ elegida por el usuario y con las imágenes que se han fijado para esos dos vectores. Toda la reconstrucción saldrá de relacionar esas cuatro columnas.'),
         facts([
-          mathFact('b1', vectorTex(input.linearPoints.b1)),
-          mathFact('b2', vectorTex(input.linearPoints.b2)),
-          mathFact('T(b1)', vectorTex(input.linearPoints.tb1)),
-          mathFact('T(b2)', vectorTex(input.linearPoints.tb2)),
+          mathFact('b_1', vectorTex(input.linearPoints.b1)),
+          mathFact('b_2', vectorTex(input.linearPoints.b2)),
+          mathFact('T(b_1)', vectorTex(input.linearPoints.tb1)),
+          mathFact('T(b_2)', vectorTex(input.linearPoints.tb2)),
         ]),
       ], 'Aquí sólo reunimos la información de partida, pero ya se ve qué base entra en juego y qué hace la aplicación sobre ella.'),
       section('matrices', 'Paso 2', 'Matriz de la base y de las imágenes', [
         paragraph('El siguiente paso consiste en ordenar esos vectores por columnas. Así se separa con claridad la información de la base origen y la información de sus imágenes.'),
         math(`B=[b_1\\ b_2]=${matrixTex(basisMatrix)},\\qquad Y=[T(b_1)\\ T(b_2)]=${matrixTex(imageMatrix)}`),
-        paragraph('La matriz buscada A debe transformar las columnas de B exactamente en las columnas de Y. Es decir, todavía no conocemos A, pero sí sabemos que cumple la relación AB=Y.'),
+        paragraph('La matriz buscada $A$ debe transformar las columnas de $B$ exactamente en las columnas de $Y$. Es decir, todavía no conocemos $A$, pero sí sabemos que cumple la relación $AB=Y$.'),
       ], 'Escribimos el problema en forma matricial para poder despejar A en el paso siguiente.'),
       section('inversa-base', 'Paso 3', 'Inversa de B', [
-        paragraph('Para despejar A necesitamos invertir B. Por eso este paso decide si la reconstrucción es posible y, en caso afirmativo, deja lista la herramienta principal.'),
+        paragraph('Para despejar $A$ necesitamos invertir $B$. Por eso este paso decide si la reconstrucción es posible y, en caso afirmativo, deja lista la herramienta principal.'),
         math(`\\det(B)=${formatTexNumber(basisDeterminant)}\\neq 0`),
         ...inverseNarrativeBlocks(basisMatrix, 'B'),
-      ], 'Si B es invertible, los datos determinan una única aplicación lineal.'),
+      ], 'Si $B$ es invertible, los datos determinan una única aplicación lineal.'),
       section('reconstruccion', 'Paso 4', 'Matriz de la aplicación en la base estándar', [
-        paragraph('Ahora sí se puede despejar la matriz buscada. Basta multiplicar la igualdad AB=Y por la derecha por B^{-1} para aislar A.'),
+        paragraph('Ahora sí se puede despejar la matriz buscada. Basta multiplicar la igualdad $AB=Y$ por la derecha por $B^{-1}$ para aislar $A$.'),
         math(`A=YB^{-1}=${matrixTex(imageMatrix)}\\cdot${matrixTex(inverseBasis)}=${matrixTex(matrix)}`),
         paragraph('Con esta cuenta ya hemos pasado de los datos geométricos a la matriz concreta de la aplicación en la base estándar.'),
       ], 'Este es el momento en el que la aplicación queda reconstruida de manera explícita.'),
       section('polinomio', 'Paso 5', 'Polinomio característico', [
-        paragraph('Una vez conocida A, miramos sus invariantes más útiles: la traza, el determinante y el discriminante del polinomio característico. Son los números que van a decidir el tipo de reducción.'),
+        paragraph('Una vez conocida $A$, miramos sus invariantes más útiles: la traza, el determinante y el discriminante del polinomio característico. Son los números que van a decidir el tipo de reducción.'),
         facts([
           mathFact('\\operatorname{tr}(A)', formatTexNumber(trace)),
           mathFact('\\det(A)', formatTexNumber(determinant)),
           mathFact('\\Delta', formatTexNumber(discriminant)),
-          textFact('Lectura geométrica', shortText),
+          textFact('Decisión espectral', shortText),
         ]),
         math(characteristicPolynomialTex(trace, determinant)),
       ], 'Aquí empieza la lectura espectral del problema: el signo del discriminante nos dirá qué forma canónica corresponde.'),
       section('clasificacion', 'Paso 6', 'Clasificación y forma canónica', canonicalData.classificationBlocks, 'Con la información espectral ya se puede decidir qué forma canónica aparece en este ejemplo.'),
       section('base-canonica', 'Paso 7', 'Autovectores y matriz de cambio de base', canonicalData.basisChangeBlocks, 'Ahora se construye la base adaptada que lleva A a la forma canónica del paso anterior.'),
       section('verificacion', 'Paso 8', 'Verificación de la forma canónica', [
-        paragraph('El último cálculo importante consiste en verificar que la base elegida era la correcta. Para eso invertimos P y comprobamos directamente la conjugación.'),
+        paragraph('El último cálculo importante consiste en verificar que la base elegida era la correcta. Para eso invertimos $P$ y comprobamos directamente la conjugación.'),
         ...inverseNarrativeBlocks(canonicalData.P, 'P'),
         math(`P^{-1}AP=${canonicalData.canonicalTex}=${canonicalData.symbolJ}`),
       ], 'La identidad final confirma que la reducción está bien hecha y que la base adaptada funciona.'),
       section('resumen', 'Resumen', 'Resumen', [
         paragraph('Si se recorre todo el proceso de corrido, la historia del cálculo queda así:'),
         list([
-          'Primero se comprueba que b1 y b2 realmente forman una base, es decir, que det(B) no se anula.',
-          'Después se escriben los datos en las matrices B y Y para traducir el problema geométrico a una igualdad matricial.',
-          'Con la inversa de B se despeja A y queda reconstruida la aplicación en la base estándar.',
-          'A continuación, la traza, el determinante y el discriminante indican qué tipo de forma canónica corresponde.',
-          'Con esa información se construye una base adaptada mediante autovectores o, si hace falta, un vector generalizado.',
-          'Por último se verifica la reducción comprobando que P^{-1}AP coincide con la forma canónica obtenida.',
+          'Comprobar que $b_1$ y $b_2$ forman una base: el criterio práctico es $\\det(B)\\ne0$, porque entonces los datos determinan una única aplicación lineal.',
+          'Ordenar la información en $B=[b_1\\ b_2]$ y $Y=[T(b_1)\\ T(b_2)]$ convierte el enunciado geométrico en la ecuación matricial $AB=Y$.',
+          'Calcular $B^{-1}$ permite despejar $A=YB^{-1}$ y obtener la matriz de la aplicación en la base estándar.',
+          'La traza, el determinante y el discriminante de $p_A$ deciden el caso: diagonal real, bloque de Jordan, matriz escalar o bloque real asociado a autovalores complejos.',
+          'La base adaptada se construye con autovectores; cuando no bastan, se añade un vector generalizado para completar la cadena de Jordan.',
+          'La verificación final comprueba $P^{-1}AP=J$ (o $J_{\\mathbb R}$ en el caso complejo), de modo que la forma canónica no queda sólo afirmada sino calculada.',
         ]),
       ], 'Este repaso final junta en pocas líneas toda la cadena de cálculos.'),
     ],
@@ -576,27 +576,27 @@ function invalidAffineDocument(input: AffineReportInput): PrintableReportDocumen
       section('datos', 'Datos', 'Puntos fijados', [
         paragraph('Lo primero es mirar con calma los tres puntos origen elegidos y las imágenes que se les han asignado.'),
         facts([
-          mathFact('p0', vectorTex(input.affineSource.p0)),
-          mathFact('p1', vectorTex(input.affineSource.p1)),
-          mathFact('p2', vectorTex(input.affineSource.p2)),
-          mathFact('q0', vectorTex(input.affineImages.q0)),
-          mathFact('q1', vectorTex(input.affineImages.q1)),
-          mathFact('q2', vectorTex(input.affineImages.q2)),
+          mathFact('p_0', vectorTex(input.affineSource.p0)),
+          mathFact('p_1', vectorTex(input.affineSource.p1)),
+          mathFact('p_2', vectorTex(input.affineSource.p2)),
+          mathFact('q_0', vectorTex(input.affineImages.q0)),
+          mathFact('q_1', vectorTex(input.affineImages.q1)),
+          mathFact('q_2', vectorTex(input.affineImages.q2)),
         ]),
       ]),
       section('independencia', 'Diagnóstico', 'Fallo de independencia afín', [
-        paragraph('La clasificación afín empieza comprobando que p0, p1 y p2 no estén alineados. Equivalentemente, los vectores p1 - p0 y p2 - p0 deben ser linealmente independientes en el espacio de direcciones.'),
+        paragraph('La clasificación afín empieza comprobando que $p_0$, $p_1$ y $p_2$ no estén alineados. Equivalentemente, los vectores $p_1-p_0$ y $p_2-p_0$ deben ser linealmente independientes en el espacio de direcciones.'),
         math(`p_1-p_0=${vectorTex(input.affineSource.p1)}-${vectorTex(input.affineSource.p0)}=${vectorTex(side1)}`),
         math(`p_2-p_0=${vectorTex(input.affineSource.p2)}-${vectorTex(input.affineSource.p0)}=${vectorTex(side2)}`),
         math(`(p_1-p_0)\\wedge(p_2-p_0)=\\begin{vmatrix}${formatTexNumber(side1.x)} & ${formatTexNumber(side2.x)}\\\\${formatTexNumber(side1.y)} & ${formatTexNumber(side2.y)}\\end{vmatrix}=${formatTexNumber(input.affineDraftArea)}`),
         note('El área orientada doble es nula o demasiado pequeña, así que la referencia afín origen es degenerada.', 'warning'),
       ]),
       section('ajuste', 'Siguiente paso', 'Cómo corregirlo', [
-        paragraph('En cuanto el triángulo origen deje de ser degenerado, la terna (p0,p1,p2) vuelve a definir una referencia afín y el resto del proceso se recupera sin cambios.'),
+        paragraph('En cuanto el triángulo origen deje de ser degenerado, la terna $(p_0,p_1,p_2)$ vuelve a definir una referencia afín y el resto del proceso se recupera sin cambios.'),
         list([
           'Mueve cualquiera de los tres puntos origen hasta que dejen de estar alineados.',
           'Comprueba que el área orientada doble del triángulo origen sea distinta de cero.',
-          'Con una referencia afín válida, el informe podrá reconstruir A, la traslación y la forma normal afín.',
+          'Con una referencia afín válida, el informe podrá reconstruir $A$, la traslación y la forma normal afín.',
         ]),
       ]),
     ],
@@ -624,12 +624,12 @@ function buildAffineClassificationBlocks(
 
   const system = identityMinusMatrix(linearPart)
   const blocks: ReportBlock[] = [
-    paragraph('Con la descomposición afín F(x) = A x + b ya reconstruida, toca decidir si el término de traslación puede absorberse mediante un cambio de origen. El criterio es estudiar la ecuación de puntos fijos.'),
+    paragraph('Con la descomposición afín $F(x)=Ax+b$ ya reconstruida, toca decidir si el término de traslación puede absorberse mediante un cambio de origen. El criterio es estudiar la ecuación de puntos fijos.'),
     facts([
       textFact('Caso afín', analysis.caseLabel),
       textFact('Conjunto fijo', analysis.fixedSet.label),
       textFact('Forma normal', analysis.canonicalFixedSet.label),
-      textFact('Lectura geométrica', analysis.shortText),
+      textFact('Diagnóstico geométrico', affineDiagnosticText(analysis)),
     ]),
     math(`(I-A)x=b,\\qquad I-A=${matrixTex(system)},\\qquad b=${vectorTex(translation)}`),
   ]
@@ -696,13 +696,61 @@ function fixedSetOrigin(analysis: AffineAnalysis): Vec2 {
   return { x: 0, y: 0 }
 }
 
+function affineDiagnosticText(analysis: AffineAnalysis) {
+  if (analysis.fixedSet.kind === 'point') {
+    return 'La ecuación de puntos fijos tiene una única solución. Al tomarla como nuevo origen, la traslación desaparece y la reducción afín se convierte en una reducción lineal de $A$.'
+  }
+
+  if (analysis.fixedSet.kind === 'line') {
+    return 'Los puntos fijos forman una recta completa. Elegir cualquier punto de esa recta como origen elimina $b$; después sólo queda escoger una base adaptada para la parte lineal.'
+  }
+
+  if (analysis.fixedSet.kind === 'plane') {
+    return 'Todo el plano es fijo: la afinidad ya no tiene traslación efectiva ni deformación pendiente de normalizar.'
+  }
+
+  if (analysis.caseLabel === 'Traslación no trivial') {
+    return 'No hay punto fijo porque $A=I$ y $b\\ne0$. Ningún cambio de origen puede absorber la traslación, así que el dato esencial es la dirección y escala de $b$.'
+  }
+
+  if (analysis.caseLabel === 'Sin punto fijo y con un autovalor igual a 1') {
+    return 'La incompatibilidad deja una componente de $b$ en la dirección propia de $\\lambda=1$. Esa componente no pertenece a $\\operatorname{im}(I-A)$ y se conserva normalizada.'
+  }
+
+  if (analysis.caseLabel === 'Caso parabólico sin punto fijo') {
+    return 'El bloque de Jordan para $\\lambda=1$ permite absorber una parte de $b$, pero queda una componente transversal esencial que produce la forma parabólica.'
+  }
+
+  return 'La ecuación de puntos fijos no tiene solución; el informe separa la parte absorbible de $b$ y conserva sólo la componente afín que no puede eliminarse.'
+}
+
+function affineNormalResultText(analysis: AffineAnalysis) {
+  if (analysis.fixedSet.kind !== 'none') {
+    return 'La referencia final tiene $b_{\\mathrm{can}}=0$. La matriz $H_{\\mathrm{can}}$ recoge únicamente la forma canónica real de la parte lineal, ya centrada en un punto fijo.'
+  }
+
+  if (analysis.caseLabel === 'Traslación no trivial') {
+    return 'La forma normal conserva una traslación unitaria, $b_{\\mathrm{can}}=(1,0)$. Ese vector es precisamente la parte que no podía desaparecer cambiando el origen.'
+  }
+
+  if (analysis.caseLabel === 'Sin punto fijo y con un autovalor igual a 1') {
+    return 'La traslación residual queda normalizada en la dirección de $\\lambda=1$; el otro eje conserva la acción del segundo autovalor de $A$.'
+  }
+
+  if (analysis.caseLabel === 'Caso parabólico sin punto fijo') {
+    return 'La normalización deja una traslación unitaria junto al bloque de Jordan: esa combinación es el rasgo afín esencial del caso parabólico.'
+  }
+
+  return 'La matriz $H_{\\mathrm{can}}$ es la comprobación final: muestra la parte lineal reducida y una traslación canónica ya normalizada.'
+}
+
 function affineNormalFacts(analysis: AffineAnalysis, canonicalLinearTex?: string, canonicalHomogeneousTex?: string): ReportBlock[] {
   return [
     facts([
       mathFact('A_{\\mathrm{can}}', canonicalLinearTex ?? matrixTex(analysis.canonicalLinearPart), true),
       mathFact('b_{\\mathrm{can}}', vectorTex(analysis.canonicalTranslation)),
       textFact('Conjunto fijo canónico', analysis.canonicalFixedSet.label),
-      textFact('Lectura rápida', analysis.shortText),
+      textFact('Resultado canónico', affineNormalResultText(analysis)),
     ]),
     math(`H_{\\mathrm{can}}=${canonicalHomogeneousTex ?? matrixTex(analysis.canonicalHomogeneous)}`),
     math(affineNormalMapTex(analysis.canonicalLinearPart, analysis.canonicalTranslation, canonicalLinearTex)),
@@ -745,7 +793,7 @@ function affineHomogeneousVerificationBlocks(
 ): ReportBlock[] {
   if (basisTex && canonicalHomogeneousTex) {
     return [
-      paragraph('El último paso comprueba la forma normal con la matriz homogénea del cambio de referencia x = O + Pz. Mantenemos P en forma simbólica para no perder fracciones ni raíces.'),
+      paragraph('El último paso comprueba la forma normal con la matriz homogénea del cambio de referencia $x=O+Pz$. Mantenemos $P$ en forma simbólica para no perder fracciones ni raíces.'),
       math(`C=\\begin{pmatrix}1&0\\\\O&P\\end{pmatrix},\\qquad O=${vectorTex(origin)},\\qquad P=${basisTex}`),
       math(`C^{-1}H_FC=H_{\\mathrm{can}}=${canonicalHomogeneousTex}`),
     ]
@@ -767,7 +815,7 @@ function affineHomogeneousVerificationBlocks(
   )
 
   return [
-    paragraph('El último paso comprueba la forma normal con la matriz homogénea del cambio de referencia x = O + Pz. En la notación del capítulo, la matriz nueva es C^{-1}H_FC.'),
+    paragraph('El último paso comprueba la forma normal con la matriz homogénea del cambio de referencia $x=O+Pz$. En la notación del capítulo, la matriz nueva es $C^{-1}H_FC$.'),
     math(`C=${matrixTex(change)}`),
     math(`C^{-1}H_FC=${matrixTex(transformed)}=H_{\\mathrm{can}}`),
   ]
@@ -826,7 +874,7 @@ function buildAffineNormalAlgorithmSections(linearPart: Matrix2, translation: Ve
       section('comprobacion-homogenea', 'Paso 6', 'Comprobar la matriz homogénea canónica', [
         ...affineHomogeneousVerificationBlocks(linearPart, translation, origin, canonicalData.P, verificationBasisTex, verificationHomogeneousTex),
         ...affineNormalFacts(analysis, canonicalData.canonicalTex, canonicalHomogeneousTex),
-      ], 'La comprobación final usa el producto C^{-1}H_FC.'),
+      ], 'La comprobación final usa el producto $C^{-1}H_FC$.'),
     ]
   }
 
@@ -837,11 +885,11 @@ function buildAffineNormalAlgorithmSections(linearPart: Matrix2, translation: Ve
 
     return [
       section('traslacion-residual', 'Paso 3', 'Separar la traslación residual', [
-        paragraph('Como A = I, se tiene im(I-A) = {0}. Ninguna parte de b puede absorberse cambiando el origen, así que toda la traslación es residual.'),
+        paragraph('Como $A=I$, se tiene $\\operatorname{im}(I-A)=\\{0\\}$. Ninguna parte de $b$ puede absorberse cambiando el origen, así que toda la traslación es residual.'),
         math(`b_1=${vectorTex({ x: 0, y: 0 })},\\qquad b_2=b=${vectorTex(translation)}`),
       ], 'En una traslación pura no hay componente eliminable.'),
       section('absorber-traslacion', 'Paso 4', 'Absorber la parte eliminable', [
-        paragraph('Este paso no modifica la aplicación: al ser I-A = 0, no existe componente b1 dentro de im(I-A).'),
+        paragraph('Este paso no modifica la aplicación: al ser $I-A=0$, no existe componente $b_1$ dentro de $\\operatorname{im}(I-A)$.'),
       ], 'La traslación no trivial queda entera para la normalización.'),
       section('referencia-adaptada', 'Paso 5', 'Elegir una base adaptada y normalizar', [
         math(`p_1=b=${vectorTex(v1)},\\qquad p_2=${vectorTex(v2)},\\qquad P=[p_1\\ p_2]=${matrixTex(P)}`),
@@ -879,18 +927,18 @@ function buildAffineNormalAlgorithmSections(linearPart: Matrix2, translation: Ve
 
     return [
       section('traslacion-residual', 'Paso 3', 'Separar la traslación residual', [
-        paragraph('Al pasar a una base propia, el algoritmo separa b en una componente absorbible dentro de im(I-A) y una componente residual en W = ker(I-A).'),
+        paragraph('Al pasar a una base propia, el algoritmo separa $b$ en una componente absorbible dentro de $\\operatorname{im}(I-A)$ y una componente residual en $W=\\ker(I-A)$.'),
         math(`p_1=${vectorTex(v1)}\\ (\\lambda=1),\\qquad p_2=${vectorTex(v2)}\\ (\\lambda=${formatTexNumber(other)})`),
         math(`\\operatorname{im}(I-A)=\\langle ${vectorTex(imageGenerator)}\\rangle=\\langle p_2\\rangle,\\qquad W=\\ker(I-A)=\\langle p_1\\rangle`),
         math(`P=[p_1\\ p_2]=${matrixTex(P)},\\qquad s=P^{-1}b=${vectorTex(s)}=(s_1,s_2)`),
         math(`b_1=s_2p_2=${vectorTex(eliminableTranslation)},\\qquad b_2=s_1p_1=${vectorTex(residualTranslation)}`),
       ], 'Este es el subcaso diagonalizable sin punto fijo del capítulo 7.'),
       section('absorber-traslacion', 'Paso 4', 'Absorber la parte eliminable', [
-        paragraph('La componente b1 se elimina desplazando el origen a una solución de (I-A)x0 = b1. La componente b2 queda como traslación residual.'),
+        paragraph('La componente $b_1$ se elimina desplazando el origen a una solución de $(I-A)x_0=b_1$. La componente $b_2$ queda como traslación residual.'),
         math(`y_2^*=\\frac{s_2}{1-${formatTexNumber(other)}}=${formatTexNumber(yStar)},\\qquad x_0=y_2^*p_2=${vectorTex(newOrigin)}`),
       ], 'Sólo sobrevive la componente paralela al eje del autovalor 1.'),
       section('referencia-adaptada', 'Paso 5', 'Elegir una base adaptada y normalizar', [
-        paragraph('Para que la traslación residual sea exactamente (1,0), tomamos como primer vector de la base la propia componente residual b2.'),
+        paragraph('Para que la traslación residual sea exactamente $(1,0)$, tomamos como primer vector de la base la propia componente residual $b_2$.'),
         math(`p_1'=b_2=s_1p_1=${vectorTex(scaledV1)},\\qquad p_2'=p_2=${vectorTex(v2)},\\qquad P_{\\mathrm{ad}}=[p_1'\\ p_2']=${matrixTex(adaptedBasis)}`),
         referenceBlock(newOrigin, adaptedBasis),
       ], 'La forma queda (u1,u2) -> (u1+1, mu u2).'),
@@ -916,18 +964,18 @@ function buildAffineNormalAlgorithmSections(linearPart: Matrix2, translation: Ve
 
     return [
       section('traslacion-residual', 'Paso 3', 'Separar la traslación residual', [
-        paragraph('En el caso parabólico usamos la convención de Jordan inferior: primero un vector generalizado y después el autovector. Aquí im(I-A) = ker(I-A), y elegimos como suplementario la dirección del vector generalizado.'),
+        paragraph('En el caso parabólico usamos la convención de Jordan inferior: primero un vector generalizado y después el autovector. Aquí $\\operatorname{im}(I-A)=\\ker(I-A)$, y elegimos como suplementario la dirección del vector generalizado.'),
         math(`p_1=${vectorTex(generalized)},\\qquad p_2=${vectorTex(eigen)},\\qquad (A-I)p_1=p_2`),
         math(`\\operatorname{im}(I-A)=\\ker(I-A)=\\langle p_2\\rangle,\\qquad W=\\langle p_1\\rangle`),
         math(`P=[p_1\\ p_2]=${matrixTex(P)},\\qquad s=P^{-1}b=${vectorTex(s)}=(s_1,s_2)`),
         math(`b_1=s_2p_2=${vectorTex(eliminableTranslation)},\\qquad b_2=s_1p_1=${vectorTex(residualTranslation)}`),
       ], 'La parte s1 es esencial y la parte s2 se absorberá desplazando el origen.'),
       section('absorber-traslacion', 'Paso 4', 'Absorber la parte eliminable', [
-        paragraph('La componente b1 se elimina buscando x0 con (I-A)x0 = b1. Como (I-A)p1 = -p2, basta mover el origen en la dirección del vector generalizado.'),
+        paragraph('La componente $b_1$ se elimina buscando $x_0$ con $(I-A)x_0=b_1$. Como $(I-A)p_1=-p_2$, basta mover el origen en la dirección del vector generalizado.'),
         math(`x_0=-s_2p_1=${vectorTex(newOrigin)}`),
       ], 'Después del centrado queda sólo la traslación esencial.'),
       section('referencia-adaptada', 'Paso 5', 'Elegir una base adaptada y normalizar', [
-        paragraph('Tomamos p1 igual a la traslación residual y p2 = (A-I)p1. Así se conserva el bloque de Jordan y la traslación queda normalizada.'),
+        paragraph('Tomamos $p_1$ igual a la traslación residual y $p_2=(A-I)p_1$. Así se conserva el bloque de Jordan y la traslación queda normalizada.'),
         math(`p_1'=b_2=s_1p_1=${vectorTex(scaledGeneralized)},\\qquad p_2'=(A-I)p_1'=s_1p_2=${vectorTex(scaledEigen)},\\qquad P_{\\mathrm{ad}}=[p_1'\\ p_2']=${matrixTex(adaptedBasis)}`),
         referenceBlock(newOrigin, adaptedBasis),
       ], 'La forma queda (u1,u2) -> (u1+1, u1+u2).'),
@@ -1005,16 +1053,16 @@ export function buildAffineReportDocument(input: AffineReportInput): PrintableRe
     ],
     sections: [
       section('separar', 'Paso 1', 'Separar la parte lineal y la traslación', [
-        paragraph('El algoritmo del capítulo 7 parte de una afinidad escrita como F(x)=Ax+b. Como aquí los datos llegan mediante tres puntos origen y sus imágenes, primero reconstruimos esa descomposición.'),
+        paragraph('El algoritmo del capítulo 7 parte de una afinidad escrita como $F(x)=Ax+b$. Como aquí los datos llegan mediante tres puntos origen y sus imágenes, primero reconstruimos esa descomposición.'),
         facts([
-          mathFact('p0', vectorTex(input.affineSource.p0)),
-          mathFact('p1', vectorTex(input.affineSource.p1)),
-          mathFact('p2', vectorTex(input.affineSource.p2)),
-          mathFact('q0', vectorTex(input.affineImages.q0)),
-          mathFact('q1', vectorTex(input.affineImages.q1)),
-          mathFact('q2', vectorTex(input.affineImages.q2)),
+          mathFact('p_0', vectorTex(input.affineSource.p0)),
+          mathFact('p_1', vectorTex(input.affineSource.p1)),
+          mathFact('p_2', vectorTex(input.affineSource.p2)),
+          mathFact('q_0', vectorTex(input.affineImages.q0)),
+          mathFact('q_1', vectorTex(input.affineImages.q1)),
+          mathFact('q_2', vectorTex(input.affineImages.q2)),
         ]),
-        paragraph('Para pasar de puntos a direcciones, restamos p0. Así formulamos el problema en el espacio de direcciones mediante los vectores p1 - p0 y p2 - p0.'),
+        paragraph('Para pasar de puntos a direcciones, restamos $p_0$. Así formulamos el problema en el espacio de direcciones mediante los vectores $p_1-p_0$ y $p_2-p_0$.'),
         math(`p_1-p_0=${vectorTex(input.affineSource.p1)}-${vectorTex(input.affineSource.p0)}=${vectorTex(side1)}`),
         math(`p_2-p_0=${vectorTex(input.affineSource.p2)}-${vectorTex(input.affineSource.p0)}=${vectorTex(side2)}`),
         math(`(p_1-p_0)\\wedge(p_2-p_0)=\\begin{vmatrix}${formatTexNumber(side1.x)} & ${formatTexNumber(side2.x)}\\\\${formatTexNumber(side1.y)} & ${formatTexNumber(side2.y)}\\end{vmatrix}=${formatTexNumber(input.affineDraftArea)}`),
@@ -1023,24 +1071,24 @@ export function buildAffineReportDocument(input: AffineReportInput): PrintableRe
           mathFact('Área geométrica', formatTexNumber(Math.abs(input.affineDraftArea) / 2)),
           textFact('Conclusión', 'Los tres puntos origen forman una referencia afín válida'),
         ]),
-        paragraph('Con las direcciones del triángulo origen y del triángulo imagen se reconstruye la parte lineal A. Luego se obtiene la traslación b imponiendo F(p0) = q0.'),
+        paragraph('Con las direcciones del triángulo origen y del triángulo imagen se reconstruye la parte lineal $A$. Luego se obtiene la traslación $b$ imponiendo $F(p_0)=q_0$.'),
         math(`S=[p_1-p_0\\ p_2-p_0]=${matrixTex(sourceFrame)},\\qquad T=[q_1-q_0\\ q_2-q_0]=${matrixTex(imageFrame)}`),
         ...inverseNarrativeBlocks(sourceFrame, 'S'),
         math(`A=TS^{-1}=${matrixTex(imageFrame)}\\cdot${matrixTex(inverseSource)}=${matrixTex(linearPart)}`),
         math(`b=q_0-Ap_0=${vectorTex(input.affineImages.q0)}-${matrixTex(linearPart)}${vectorTex(input.affineSource.p0)}=${vectorTex(translation)}`),
         math(`H_F=${matrixTex(analysis.sourceHomogeneous)}`),
-      ], 'Quedan fijados A, b y la matriz homogénea inicial H_F.'),
+      ], 'Quedan fijados $A$, $b$ y la matriz homogénea inicial $H_F$.'),
       section('puntos-fijos', 'Paso 2', 'Resolver la ecuación de puntos fijos', buildAffineClassificationBlocks(linearPart, translation, input), 'Este paso decide si la traslación puede eliminarse poniendo el origen en un punto fijo.'),
       ...buildAffineNormalAlgorithmSections(linearPart, translation, analysis),
       section('resumen', 'Resumen', 'Resumen', [
         paragraph('Si se leen juntos los pasos anteriores, el proceso completo se resume así:'),
         list([
-          'Separar la parte lineal y la traslación: reconstruir A, b y H_F.',
-          'Resolver la ecuación de puntos fijos (I-A)x=b.',
-          'Si hay punto fijo, trasladar el origen a una solución; si no lo hay, separar la traslación residual.',
-          'Absorber la parte eliminable de la traslación o reducir la parte lineal que queda.',
-          'Elegir una referencia afín adaptada y normalizar los parámetros esenciales.',
-          'Comprobar la forma normal mediante C^{-1}H_FC=H_can.',
+          'Verificar primero que $p_0$, $p_1$ y $p_2$ forman una referencia afín: el área orientada doble no puede anularse.',
+          'Reconstruir la afinidad como $F(x)=Ax+b$: las direcciones del triángulo dan $A=TS^{-1}$ y la condición $F(p_0)=q_0$ fija $b$.',
+          'Escribir la matriz homogénea $H_F$ para tratar parte lineal y traslación en una sola conjugación matricial.',
+          'Resolver $(I-A)x=b$ para decidir si existe un origen que elimine la traslación; cuando no existe, se separa la componente residual de $b$.',
+          'Elegir una referencia afín adaptada: el origen absorbe lo eliminable y la base normaliza autovectores, bloques de Jordan o traslaciones esenciales.',
+          'Comprobar la forma normal con $C^{-1}H_FC=H_{\\mathrm{can}}$, que es la igualdad que certifica el resultado final.',
         ]),
       ], 'Este repaso final deja el hilo del ejemplo en pocas líneas y sin tecnicismos innecesarios.'),
     ],
