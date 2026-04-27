@@ -388,7 +388,7 @@ function isZeroMatrix(matrix: Matrix2) {
   return matrix.every((row) => row.every((entry) => Math.abs(entry) < EPSILON))
 }
 
-function classifyAffineFixedSet(linearPart: Matrix2, translation: Vec2): AffineFixedSet {
+export function classifyAffineFixedSet(linearPart: Matrix2, translation: Vec2): AffineFixedSet {
   const system: Matrix2 = [
     [linearPart[0][0] - 1, linearPart[0][1]],
     [linearPart[1][0], linearPart[1][1] - 1],
@@ -468,7 +468,7 @@ function generalizedJordanBasisForOne(matrix: Matrix2) {
       ? { x: rhs / row[0], y: 0 }
       : { x: 0, y: rhs / row[1] }
 
-  return matrixFromImages(eigenvector, generalized)
+  return matrixFromImages(generalized, eigenvector)
 }
 
 export function canonicalizeAffineMap(
@@ -600,7 +600,7 @@ export function canonicalizeAffineMap(
     const basis = generalizedJordanBasisForOne(linearPart)
     const inverseBasis = inverse2(basis)
     const translationInBasis = inverseBasis ? applyMatrix(inverseBasis, translation) : { x: 0, y: 1 }
-    const canonicalTranslation = almostEqual(translationInBasis.y, 0) ? { x: 0, y: 0 } : { x: 1, y: 0 }
+    const canonicalTranslation = almostEqual(translationInBasis.x, 0) ? { x: 0, y: 0 } : { x: 1, y: 0 }
     const canonicalLinearPart: Matrix2 = [[1, 0], [1, 1]]
 
     return {
@@ -613,12 +613,12 @@ export function canonicalizeAffineMap(
       fixedSet,
       canonicalFixedSet: classifyAffineFixedSet(canonicalLinearPart, canonicalTranslation),
       caseLabel: 'Caso parabólico sin punto fijo',
-      shortText: 'Aparece un bloque de Jordan para el autovalor 1 y una traslación transversal que no se puede eliminar.',
+      shortText: 'Aparece un bloque de Jordan para el autovalor 1 y una traslación esencial que no se puede eliminar.',
       canvasSubtitle: 'La forma normal afín se representa como (x, y) ↦ (x + 1, x + y).',
       steps: [
         'La parte lineal tiene el autovalor 1, pero aparece con un bloque de Jordan no trivial.',
         'Como no hay punto fijo, sobrevive una componente afín esencial.',
-        'En una base de Jordan, la traslación residual sólo importa en la dirección transversal.',
+        'En una base de Jordan ordenada como (vector generalizado, autovector), la traslación esencial queda en la primera coordenada.',
         'Después se normaliza esa componente y aparece la forma parabólica estándar.',
       ],
     }

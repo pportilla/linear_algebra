@@ -232,10 +232,6 @@ export function CartesianPlane({
   } | null>(null)
 
   useEffect(() => {
-    setHalfRange(range)
-  }, [range])
-
-  useEffect(() => {
     const node = svgRef.current
     if (!node) {
       return undefined

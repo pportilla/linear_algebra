@@ -139,8 +139,7 @@ function App() {
 
   useEffect(() => {
     if (pdfApiBaseUrl.length > 0) {
-      setHasServerPdfExport(true)
-      return
+      return undefined
     }
 
     const controller = new AbortController()
@@ -624,4 +623,3 @@ function App() {
 }
 
 export default App
-

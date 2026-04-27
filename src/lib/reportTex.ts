@@ -1,5 +1,6 @@
 import {
   applyMatrix,
+  classifyAffineFixedSet,
   determinant2,
   homogeneousFromAffine,
   inverse2,
@@ -9,7 +10,7 @@ import {
   subtractVectors,
   trace2,
 } from './math2d'
-import type { Matrix2, Vec2 } from './math2d'
+import type { AffineFixedSet, Matrix2, Vec2 } from './math2d'
 import {
   addExpressions,
   expressionFromNumber,
@@ -262,29 +263,6 @@ function classifyLinear(matrix: Matrix2): LinearTexAnalysis {
   }
 }
 
-function solvePossiblySingular(matrix: Matrix2, rhs: Vec2) {
-  const inverse = inverse2(matrix)
-  if (inverse) {
-    return applyMatrix(inverse, rhs)
-  }
-
-  const rows = [
-    { a: matrix[0][0], b: matrix[0][1], c: rhs.x },
-    { a: matrix[1][0], b: matrix[1][1], c: rhs.y },
-  ].sort((left, right) => Math.abs(right.a) + Math.abs(right.b) - (Math.abs(left.a) + Math.abs(left.b)))
-
-  const pivot = rows[0]
-  if (Math.abs(pivot.a) + Math.abs(pivot.b) < EPSILON) {
-    return Math.abs(rhs.x) + Math.abs(rhs.y) < EPSILON ? { x: 0, y: 0 } : null
-  }
-
-  const candidate = Math.abs(pivot.a) >= Math.abs(pivot.b)
-    ? { x: pivot.c / pivot.a, y: 0 }
-    : { x: 0, y: pivot.c / pivot.b }
-  const image = applyMatrix(matrix, candidate)
-  return Math.hypot(image.x - rhs.x, image.y - rhs.y) < 1e-6 ? candidate : null
-}
-
 function kernelVectorOfSingular(matrix: Matrix2): Vec2 {
   const [[a, b], [c, d]] = matrix
 
@@ -478,29 +456,78 @@ P=[\\,v\\ u\\,]=${expressionMatrixToLatex([[symbolicBasis.v[0], symbolicBasis.u[
   }
 }
 
-function buildAffineCaseFixedPoint(linearPart: Matrix2, fixedPoint: Vec2, analysis: LinearTexAnalysis) {
+function fixedSetCaseTitle(fixedSet: AffineFixedSet) {
+  if (fixedSet.kind === 'point') {
+    return 'aplicación afín con un único punto fijo'
+  }
+
+  if (fixedSet.kind === 'line') {
+    return 'aplicación afín con una recta de puntos fijos'
+  }
+
+  if (fixedSet.kind === 'plane') {
+    return 'identidad afín'
+  }
+
+  return 'aplicación afín sin puntos fijos'
+}
+
+function fixedSetChosenOrigin(fixedSet: AffineFixedSet): Vec2 {
+  if (fixedSet.kind === 'point' && fixedSet.point) {
+    return fixedSet.point
+  }
+
+  if (fixedSet.kind === 'line' && fixedSet.anchor) {
+    return fixedSet.anchor
+  }
+
+  return { x: 0, y: 0 }
+}
+
+function buildAffineCaseWithFixedSet(linearPart: Matrix2, translation: Vec2, fixedSet: AffineFixedSet, analysis: LinearTexAnalysis) {
   const aMinusI = matrixMinusScalar(linearPart, 1)
   const det = determinant2(aMinusI)
+  const rhs = { x: -translation.x, y: -translation.y }
+  const chosenOrigin = fixedSetChosenOrigin(fixedSet)
   const canonical = buildLinearCanonical(linearPart, analysis)
   const invP = inverse2(canonical.P)
   const verification = invP ? multiplyMatrices(multiplyMatrices(invP, linearPart), canonical.P) : canonical.canonical
   const symbolJ = analysis.caseId === 'complex-pair' ? 'J_{\\mathbb R}' : 'J'
+  let fixedSetExplanation = ''
+
+  if (fixedSet.kind === 'point' && fixedSet.point) {
+    fixedSetExplanation = `
+Como $\\det(A-I)\\neq 0$, el sistema tiene solución única:
+\\[
+c=(A-I)^{-1}(-t)=${vecToLatex(fixedSet.point)}.
+\\]
+`
+  } else if (fixedSet.kind === 'line' && fixedSet.anchor && fixedSet.direction) {
+    fixedSetExplanation = `
+Aquí $\\det(A-I)=0$, pero el sistema es compatible indeterminado. El conjunto de puntos fijos es la recta
+\\[
+c=${vecToLatex(fixedSet.anchor)}+r\\,${vecToLatex(fixedSet.direction)},\\qquad r\\in\\mathbb R.
+\\]
+Siguiendo el algoritmo, basta escoger un punto de esa recta como nuevo origen; tomamos $c_0=${vecToLatex(chosenOrigin)}$.
+`
+  } else {
+    fixedSetExplanation = `
+En este caso $A=I$ y $t=0$, así que la ecuación de puntos fijos se satisface para todo $c\\in\\mathbb R^2$. Elegimos $c_0=${vecToLatex(chosenOrigin)}$ como origen adaptado.
+`
+  }
 
   return `
-\\subsection*{Paso 7. Búsqueda de punto fijo}
+\\subsection*{Paso 7. Puntos fijos y elección de origen}
 Se plantea $F(c)=c$, es decir, $Ac+t=c$, o equivalentemente $(A-I)c=-t$:
 \\[
-A-I=${matrixToLatex(aMinusI)},\\qquad \\det(A-I)=${formatNumber(det)}.
+A-I=${matrixToLatex(aMinusI)},\\qquad -t=${vecToLatex(rhs)},\\qquad \\det(A-I)=${formatNumber(det)}.
 \\]
-Como $\\det(A-I)\\neq 0$, el sistema tiene solución única
+${fixedSetExplanation}
+Al trasladar el origen a $c_0=${vecToLatex(chosenOrigin)}$, la aplicación se convierte en
 \\[
-c=(A-I)^{-1}(-t)=${vecToLatex(fixedPoint)}.
+\\tilde F(y)=F(y+c_0)-c_0=Ay,
 \\]
-Por tanto, $F$ tiene un único punto fijo. En las coordenadas trasladadas $y=x-c$, la aplicación se convierte en
-\\[
-\\tilde F(y)=F(y+c)-c=Ay,
-\\]
-es decir, la traslación desaparece y el problema afín se reduce al lineal.
+es decir, la traslación desaparece. Este es exactamente el caso compatible del algoritmo: después de elegir un punto fijo como origen, sólo queda reducir la parte lineal.
 
 \\subsection*{Paso 8. Reducción de Jordan de la parte lineal $A$}
 ${canonical.body}
@@ -513,7 +540,7 @@ P^{-1}AP=${matrixToLatex(verification)}=${matrixToLatex(analysis.canonicalMatrix
 \\subsection*{Paso 9. Referencia afín adaptada}
 La referencia afín en la que $F$ adopta su forma normal es
 \\[
-\\mathcal R=(${vecToLatex(fixedPoint)},(${vecToLatex(canonical.v1)},${vecToLatex(canonical.v2)})).
+\\mathcal R=(${vecToLatex(chosenOrigin)},(${vecToLatex(canonical.v1)},${vecToLatex(canonical.v2)})).
 \\]
 En esa referencia la traslación es nula y la parte lineal es $${symbolJ}$. La matriz homogénea de la forma normal afín es
 \\[
@@ -628,13 +655,14 @@ H_{\\mathrm{can}}=${matrixToLatex3x3(homogeneousFromAffine(canonical, { x: 1, y:
 }
 
 function buildAffineCaseParabolic(linearPart: Matrix2, translation: Vec2) {
-  const v1 = eigenvectorFor(linearPart, 1)
-  const v2 = generalizedEigenvectorFor(linearPart, 1, v1)
-  const P = matrixFromImages(v1, v2)
+  const eigen = eigenvectorFor(linearPart, 1)
+  const generalized = generalizedEigenvectorFor(linearPart, 1, eigen)
+  const P = matrixFromImages(generalized, eigen)
   const invP = inverse2(P)
-  const s = invP ? applyMatrix(invP, translation) : { x: 0, y: 1 }
-  const newOrigin = { x: -s.x * v2.x, y: -s.x * v2.y }
-  const scaledV1 = { x: s.y * v1.x, y: s.y * v1.y }
+  const s = invP ? applyMatrix(invP, translation) : { x: 1, y: 0 }
+  const newOrigin = { x: -s.y * generalized.x, y: -s.y * generalized.y }
+  const scaledGeneralized = { x: s.x * generalized.x, y: s.x * generalized.y }
+  const scaledEigen = { x: s.x * eigen.x, y: s.x * eigen.y }
   const canonical: Matrix2 = [[1, 0], [1, 1]]
 
   return `
@@ -644,43 +672,47 @@ $A$ tiene autovalor doble $\\lambda=1$ con bloque de Jordan, de modo que $A-I\\n
 \\subsection*{Paso 8. Cambio a base de Jordan}
 Autovector y vector generalizado para $\\lambda=1$:
 \\[
-v_1=${vecToLatex(v1)}\\ \\text{(autovector)},
+w=${vecToLatex(generalized)}\\ \\text{(generalizado)},
 \\qquad
-v_2=${vecToLatex(v2)}\\ \\text{con }(A-I)v_2=v_1.
+v=${vecToLatex(eigen)}\\ \\text{(autovector)},\\qquad (A-I)w=v.
 \\]
-Con $P=[v_1\\ v_2]=${matrixToLatex(P)}$, $A$ queda en forma de Jordan. La traslación en estas coordenadas es
+Con $P=[w\\ v]=${matrixToLatex(P)}$, $A$ queda en la convención de Jordan usada en la aplicación:
+\\[
+P^{-1}AP=\\begin{pmatrix}1&0\\\\1&1\\end{pmatrix}.
+\\]
+La traslación en estas coordenadas es
 \\[
 s=P^{-1}t=${vecToLatex(s)}=(s_1,s_2).
 \\]
 En ellas $F$ actúa como
 \\[
-(y_1,y_2)\\longmapsto (y_1+y_2+s_1,\\ y_2+s_2).
+(y_1,y_2)\\longmapsto (y_1+s_1,\\ y_1+y_2+s_2).
 \\]
 
 \\subsection*{Paso 9. Cancelar la parte no esencial de la traslación}
-Desplazamos el origen tomando $c_1=0$ y $c_2=-s_1$, es decir,
+El término $s_2$ se elimina desplazando el origen en coordenadas de Jordan con $c_1=-s_2$ y $c_2=0$, es decir,
 \\[
-O'=-s_1\\,v_2=${vecToLatex(newOrigin)}.
+O'=-s_2\\,w=${vecToLatex(newOrigin)}.
 \\]
 En las nuevas coordenadas $z=y-c$ la aplicación queda
 \\[
-(z_1,z_2)\\longmapsto (z_1+z_2,\\ z_2+s_2).
+(z_1,z_2)\\longmapsto (z_1+s_1,\\ z_1+z_2).
 \\]
 
-\\subsection*{Paso 10. Normalización de la traslación transversal}
-Se reescala la segunda coordenada con $w_2=z_2/s_2$. Para respetar la forma del bloque de Jordan hay que reescalar también la primera, sustituyendo $v_1$ por $s_2 v_1=${vecToLatex(scaledV1)}$. Con ello se llega a la forma canónica
+\\subsection*{Paso 10. Normalización de la traslación esencial}
+Como no hay punto fijo, $s_1\\neq 0$. Se reescalan las dos coordenadas por el mismo factor para conservar el bloque de Jordan y convertir la traslación residual en $1$. La nueva base es
 \\[
-(w_1,w_2)\\longmapsto (w_1+w_2,\\ w_2+1).
+(${vecToLatex(scaledGeneralized)},${vecToLatex(scaledEigen)})=(s_1w,s_1v).
 \\]
-Si ahora intercambiamos coordenadas con $u_1=w_2$ y $u_2=w_1$, la misma dinámica queda escrita como
+Con ello se llega directamente a la forma parabólica normal
 \\[
 (u_1,u_2)\\longmapsto (u_1+1,\\ u_1+u_2),
 \\]
-que es la convención usada en las notas para el bloque de Jordan y la traslación residual.
+que corresponde a la matriz lineal $\\begin{pmatrix}1&0\\\\1&1\\end{pmatrix}$ y a la traslación $(1,0)$.
 
 \\subsection*{Paso 11. Referencia afín adaptada}
 \\[
-\\mathcal R=(${vecToLatex(newOrigin)},(${vecToLatex(scaledV1)},${vecToLatex(v2)})).
+\\mathcal R=(${vecToLatex(newOrigin)},(${vecToLatex(scaledGeneralized)},${vecToLatex(scaledEigen)})).
 \\]
 Matriz homogénea de la forma normal afín:
 \\[
@@ -967,15 +999,14 @@ export function buildAffineTex(payload: AffineTexPayload) {
   const translation = subtractVectors(payload.image.q0, applyMatrix(linearPart, payload.source.p0))
   const homogeneous = homogeneousFromAffine(linearPart, translation)
   const analysis = classifyLinear(linearPart)
-  const aMinusI = matrixMinusScalar(linearPart, 1)
-  const fixedPoint = solvePossiblySingular(aMinusI, { x: -translation.x, y: -translation.y })
+  const fixedSet = classifyAffineFixedSet(linearPart, translation)
 
   let caseTitle = ''
   let caseBlock = ''
 
-  if (fixedPoint) {
-    caseTitle = 'aplicación afín con punto fijo'
-    caseBlock = buildAffineCaseFixedPoint(linearPart, fixedPoint, analysis)
+  if (fixedSet.kind !== 'none') {
+    caseTitle = fixedSetCaseTitle(fixedSet)
+    caseBlock = buildAffineCaseWithFixedSet(linearPart, translation, fixedSet, analysis)
   } else if (isScalarMatrix(linearPart, 1)) {
     caseTitle = 'traslación no trivial'
     caseBlock = buildAffineCaseTranslation(translation)
@@ -1063,8 +1094,8 @@ ${caseBlock}
 \\item Calcular $A=TS^{-1}$ y $t=q_0-Ap_0$.
 \\item Escribir la matriz homogénea $H_F$.
 \\item Buscar puntos fijos resolviendo $(A-I)c=-t$.
-\\item Si existe punto fijo, trasladar el origen a $c$ y reducir $A$ por Jordan para obtener una referencia afín adaptada.
-\\item Si no existe, identificar el caso (traslación pura, autovalor $1$ simple, bloque de Jordan de $1$) y normalizar la traslación esencial por centrado y reescalado.
+\\item Si el sistema es compatible, escoger una solución $c_0$ (única, de una recta de fijos o cualquiera si todo el plano es fijo), trasladar el origen a $c_0$ y reducir $A$ por Jordan.
+\\item Si el sistema es incompatible, identificar el caso sin puntos fijos (traslación pura, autovalor $1$ simple o bloque de Jordan de $1$) y normalizar la traslación esencial por centrado y reescalado.
 \\item Escribir la referencia afín adaptada $\\mathcal R=(O,(v_1,v_2))$ y la matriz homogénea de la forma normal.
 \\end{enumerate}
 \\end{document}

@@ -1,11 +1,13 @@
 import {
+  applyMatrix,
   determinant2,
   formatMatrixEntry,
   inverse2,
   matrixFromImages,
   subtractVectors,
+  trace2,
 } from './math2d'
-import type { Matrix2, Vec2 } from './math2d'
+import type { AffineAnalysis, Matrix2, Vec2 } from './math2d'
 import {
   addExpressions,
   expressionFromNumber,
@@ -644,6 +646,146 @@ function buildAffineClassificationBlocks(
   return blocks
 }
 
+function scaleVector(vector: Vec2, scalar: number): Vec2 {
+  return { x: scalar * vector.x, y: scalar * vector.y }
+}
+
+function perpendicularVector(vector: Vec2): Vec2 {
+  return Math.abs(vector.x) >= Math.abs(vector.y)
+    ? { x: -vector.y, y: vector.x }
+    : { x: vector.y, y: -vector.x }
+}
+
+function fixedSetOrigin(analysis: AffineAnalysis): Vec2 {
+  if (analysis.fixedSet.kind === 'point' && analysis.fixedSet.point) {
+    return analysis.fixedSet.point
+  }
+
+  if (analysis.fixedSet.kind === 'line' && analysis.fixedSet.anchor) {
+    return analysis.fixedSet.anchor
+  }
+
+  return { x: 0, y: 0 }
+}
+
+function affineNormalFacts(analysis: AffineAnalysis): ReportBlock[] {
+  return [
+    facts([
+      mathFact('A_{\\mathrm{can}}', matrixTex(analysis.canonicalLinearPart), true),
+      mathFact('t_{\\mathrm{can}}', vectorTex(analysis.canonicalTranslation)),
+      textFact('Conjunto fijo canónico', analysis.canonicalFixedSet.label),
+      textFact('Lectura rápida', analysis.shortText),
+    ]),
+    math(`H_{\\mathrm{can}}=${matrixTex(analysis.canonicalHomogeneous)}`),
+    math(affineNormalMapTex(analysis.canonicalLinearPart, analysis.canonicalTranslation)),
+  ]
+}
+
+function buildAffineNormalAlgorithmBlocks(linearPart: Matrix2, translation: Vec2, analysis: AffineAnalysis): ReportBlock[] {
+  const system = matrixMinusScalar(linearPart, 1)
+  const rhs = { x: -translation.x, y: -translation.y }
+
+  if (analysis.fixedSet.kind !== 'none') {
+    const origin = fixedSetOrigin(analysis)
+    const linearTrace = trace2(linearPart)
+    const linearDeterminant = determinant2(linearPart)
+    const discriminant = linearTrace * linearTrace - 4 * linearDeterminant
+    const canonicalData = buildLinearCanonicalData(linearPart, linearTrace, linearDeterminant, discriminant)
+    const fixedBlocks: ReportBlock[] = [
+      paragraph('El algoritmo separa primero el caso compatible de la ecuación de puntos fijos. Si hay al menos una solución, escogemos una de ellas como nuevo origen y la traslación desaparece.'),
+      math(`(A-I)c=-t,\\qquad A-I=${matrixTex(system)},\\qquad -t=${vectorTex(rhs)}`),
+    ]
+
+    if (analysis.fixedSet.kind === 'point' && analysis.fixedSet.point) {
+      fixedBlocks.push(paragraph('Aquí el sistema tiene solución única, así que el origen adaptado es ese punto fijo.'))
+      fixedBlocks.push(math(`c_0=${vectorTex(analysis.fixedSet.point)}`))
+    } else if (analysis.fixedSet.kind === 'line' && analysis.fixedSet.anchor && analysis.fixedSet.direction) {
+      fixedBlocks.push(paragraph('Aquí el sistema es compatible indeterminado: los puntos fijos forman una recta. El algoritmo permite tomar cualquier punto de esa recta como origen.'))
+      fixedBlocks.push(math(`c=${vectorTex(analysis.fixedSet.anchor)}+s\\,${vectorTex(analysis.fixedSet.direction)},\\qquad c_0=${vectorTex(origin)}`))
+    } else {
+      fixedBlocks.push(paragraph('Aquí todo punto es fijo. Tomamos el origen canónico como punto fijo elegido para mantener la referencia lo más simple posible.'))
+      fixedBlocks.push(math(`c_0=${vectorTex(origin)}`))
+    }
+
+    fixedBlocks.push(paragraph('Con el cambio y=x-c0 queda F(y+c0)-c0=Ay. Por tanto, la clasificación afín continúa reduciendo la parte lineal en una base adaptada.'))
+    fixedBlocks.push(...canonicalData.basisChangeBlocks)
+    fixedBlocks.push(math(`P=${canonicalData.pTex},\\qquad \\mathcal R=(${vectorTex(origin)},(${vectorTex({ x: canonicalData.P[0][0], y: canonicalData.P[1][0] })},${vectorTex({ x: canonicalData.P[0][1], y: canonicalData.P[1][1] })}))`))
+
+    return [
+      ...fixedBlocks,
+      ...affineNormalFacts(analysis),
+    ]
+  }
+
+  if (analysis.caseLabel === 'Traslación no trivial') {
+    const v1 = translation
+    const v2 = perpendicularVector(translation)
+    const P = matrixFromImages(v1, v2)
+
+    return [
+      paragraph('Como A=I y t no es nulo, la ecuación de puntos fijos se reduce a 0=-t y es incompatible. Este es el caso de traslación pura del algoritmo.'),
+      math(`v_1=t=${vectorTex(v1)},\\qquad v_2=${vectorTex(v2)},\\qquad P=[v_1\\ v_2]=${matrixTex(P)}`),
+      paragraph('En esa base, la traslación queda normalizada como primera coordenada. No hace falta mover el origen.'),
+      math(`P^{-1}t=${vectorTex({ x: 1, y: 0 })},\\qquad \\mathcal R=((0,0),(${vectorTex(v1)},${vectorTex(v2)}))`),
+      ...affineNormalFacts(analysis),
+    ]
+  }
+
+  if (analysis.caseLabel === 'Sin punto fijo y con un autovalor igual a 1') {
+    const linearTrace = trace2(linearPart)
+    const linearDeterminant = determinant2(linearPart)
+    const discriminant = linearTrace * linearTrace - 4 * linearDeterminant
+    const root = Math.sqrt(discriminant)
+    const lambda1 = (linearTrace + root) / 2
+    const lambda2 = (linearTrace - root) / 2
+    const other = Math.abs(lambda1 - 1) < 1e-6 ? lambda2 : lambda1
+    const v1 = eigenvectorFor(linearPart, 1)
+    const v2 = eigenvectorFor(linearPart, other)
+    const P = matrixFromImages(v1, v2)
+    const invP = inverse2(P)
+    const s = invP ? applyMatrix(invP, translation) : { x: 1, y: 0 }
+    const yStar = s.y / (1 - other)
+    const newOrigin = scaleVector(v2, yStar)
+    const scaledV1 = scaleVector(v1, s.x)
+
+    return [
+      paragraph('Al pasar a una base propia, la componente de traslación en la dirección del autovalor 1 no puede eliminarse; la otra sí se cancela desplazando el origen.'),
+      math(`v_1=${vectorTex(v1)}\\ (\\lambda=1),\\qquad v_2=${vectorTex(v2)}\\ (\\lambda=${formatTexNumber(other)})`),
+      math(`P=[v_1\\ v_2]=${matrixTex(P)},\\qquad s=P^{-1}t=${vectorTex(s)}=(s_1,s_2)`),
+      math(`y_2^*=\\frac{s_2}{1-${formatTexNumber(other)}}=${formatTexNumber(yStar)},\\qquad O'=y_2^*v_2=${vectorTex(newOrigin)}`),
+      paragraph('Después se reescala la dirección propia del autovalor 1 para que la traslación residual sea exactamente una unidad.'),
+      math(`\\mathcal R=(${vectorTex(newOrigin)},(${vectorTex(scaledV1)},${vectorTex(v2)}))`),
+      ...affineNormalFacts(analysis),
+    ]
+  }
+
+  if (analysis.caseLabel === 'Caso parabólico sin punto fijo') {
+    const eigen = eigenvectorFor(linearPart, 1)
+    const generalized = generalizedEigenvectorFor(linearPart, 1, eigen)
+    const P = matrixFromImages(generalized, eigen)
+    const invP = inverse2(P)
+    const s = invP ? applyMatrix(invP, translation) : { x: 1, y: 0 }
+    const newOrigin = scaleVector(generalized, -s.y)
+    const scaledGeneralized = scaleVector(generalized, s.x)
+    const scaledEigen = scaleVector(eigen, s.x)
+
+    return [
+      paragraph('En el caso parabólico usamos la convención de Jordan inferior: primero el vector generalizado y después el autovector. La incompatibilidad del sistema de puntos fijos deja una traslación esencial en la primera coordenada.'),
+      math(`w=${vectorTex(generalized)},\\qquad v=${vectorTex(eigen)},\\qquad (A-I)w=v`),
+      math(`P=[w\\ v]=${matrixTex(P)},\\qquad s=P^{-1}t=${vectorTex(s)}=(s_1,s_2)`),
+      paragraph('El desplazamiento del origen elimina la componente no esencial s2. Después se reescalan las dos direcciones por s1 para conservar el bloque de Jordan y normalizar la traslación.'),
+      math(`O'=-s_2w=${vectorTex(newOrigin)}`),
+      math(`\\mathcal R=(${vectorTex(newOrigin)},(${vectorTex(scaledGeneralized)},${vectorTex(scaledEigen)}))`),
+      ...affineNormalFacts(analysis),
+    ]
+  }
+
+  return [
+    paragraph('En este caso la referencia adaptada queda determinada por la reducción lineal de A; no aparece una traslación esencial adicional en la forma normal mostrada.'),
+    ...affineNormalFacts(analysis),
+  ]
+}
+
 export function buildAffineReportDocument(input: AffineReportInput): PrintableReportDocument {
   if (!input.affineDraftValid || !input.affineAnalysis) {
     return invalidAffineDocument(input)
@@ -709,17 +851,7 @@ export function buildAffineReportDocument(input: AffineReportInput): PrintableRe
         paragraph('Al final de este paso queda determinada la descomposición afín y su matriz homogénea, que codifica en un único bloque la parte lineal y el término independiente.'),
       ], 'Aquí se reconstruye por completo la aplicación afín a partir de los datos geométricos.'),
       section('clasificacion', 'Paso 4', 'Geometría afín: puntos fijos y caso normal', buildAffineClassificationBlocks(linearPart, translation, input), 'Con A y t ya calculados, ahora se decide si la traslación se puede absorber o si sobrevive en la forma normal.'),
-      section('normal', 'Paso 5', 'Representante canónico en la nueva referencia', [
-        paragraph('Una vez identificado el caso geométrico, escribimos la forma normal en una referencia afín adaptada. Es el representante canónico dentro de su clase por conjugación afín.'),
-        facts([
-          mathFact('A_{\\mathrm{can}}', matrixTex(analysis.canonicalLinearPart), true),
-          mathFact('t_{\\mathrm{can}}', vectorTex(analysis.canonicalTranslation)),
-          textFact('Conjunto fijo canónico', analysis.canonicalFixedSet.label),
-          textFact('Lectura rápida', analysis.shortText),
-        ]),
-        math(`H_{\\mathrm{can}}=${matrixTex(analysis.canonicalHomogeneous)}`),
-        math(affineNormalMapTex(analysis.canonicalLinearPart, analysis.canonicalTranslation)),
-      ], 'La referencia adaptada concentra el comportamiento esencial y facilita la comparación con otros ejemplos de la misma clase.'),
+      section('normal', 'Paso 5', 'Referencia adaptada y forma normal', buildAffineNormalAlgorithmBlocks(linearPart, translation, analysis), 'La referencia adaptada sigue el caso que marca el algoritmo y concentra el comportamiento esencial.'),
       section('resumen', 'Resumen', 'Resumen', [
         paragraph('Si se leen juntos los pasos anteriores, el proceso completo se resume así:'),
         list(analysis.steps),
