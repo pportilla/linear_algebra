@@ -1,4 +1,4 @@
-import type { AffineAnalysis, LinearAnalysis, LinearMapData, Vec2 } from './math2d'
+import type { AffineAnalysis, ConicAnalysis, ConicCoefficients, LinearAnalysis, LinearMapData, Vec2 } from './math2d'
 
 export interface LinearReportInput {
   linearPoints: {
@@ -27,6 +27,12 @@ export interface AffineReportInput {
   affineAnalysis: AffineAnalysis | null
 }
 
+export interface ConicReportInput {
+  conicCoefficients: ConicCoefficients
+  conicAnalysis: ConicAnalysis
+  normalMode: 'affine' | 'euclidean'
+}
+
 export interface ReportFact {
   label: string
   labelType?: 'text' | 'math'
@@ -51,7 +57,7 @@ export interface ReportSection {
 }
 
 export interface PrintableReportDocument {
-  kind: 'linear' | 'affine'
+  kind: 'linear' | 'affine' | 'conic'
   title: string
   subtitle: string
   statusLabel: string

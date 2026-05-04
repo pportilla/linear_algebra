@@ -1,6 +1,8 @@
 import {
   applyMatrix,
+  conicMatrixFromCoefficients,
   determinant2,
+  formatConicEquationTex,
   formatMatrixEntry,
   homogeneousFromAffine,
   inverse2,
@@ -8,7 +10,7 @@ import {
   subtractVectors,
   trace2,
 } from './math2d'
-import type { AffineAnalysis, Matrix2, Vec2 } from './math2d'
+import type { AffineAnalysis, ConicCanonicalData, ConicReductionData, Matrix2, Vec2 } from './math2d'
 import {
   addExpressions,
   expressionFromNumber,
@@ -23,6 +25,7 @@ import {
 } from './symbolicMath'
 import type {
   AffineReportInput,
+  ConicReportInput,
   LinearReportInput,
   PrintableReportDocument,
   ReportBlock,
@@ -1096,6 +1099,186 @@ export function buildAffineReportDocument(input: AffineReportInput): PrintableRe
       mathFact('A', matrixTex(linearPart), true),
       mathFact('b', vectorTex(translation)),
       mathFact('H_{\\mathrm{can}}', canonicalHomogeneousTex, true),
+    ],
+  }
+}
+
+function conicCoefficientFacts(input: ConicReportInput) {
+  const coefficients = input.conicCoefficients
+  return facts([
+    mathFact('a', formatTexNumber(coefficients.a)),
+    mathFact('b', formatTexNumber(coefficients.b)),
+    mathFact('c', formatTexNumber(coefficients.c)),
+    mathFact('d', formatTexNumber(coefficients.d)),
+    mathFact('e', formatTexNumber(coefficients.e)),
+    mathFact('f', formatTexNumber(coefficients.f)),
+  ])
+}
+
+function conicCanonicalParameterFacts(canonical: ConicCanonicalData) {
+  if (canonical.parameters.length === 0) {
+    return [textFact('Parámetros', 'Sin parámetro euclídeo adicional')]
+  }
+
+  return canonical.parameters.map((parameter) =>
+    textFact(parameter.text ? `${parameter.label} (${parameter.text})` : parameter.label, formatMatrixEntry(parameter.value)),
+  )
+}
+
+function invalidConicDocument(input: ConicReportInput): PrintableReportDocument {
+  const coefficients = input.conicCoefficients
+  const matrix = conicMatrixFromCoefficients(coefficients)
+
+  return {
+    kind: 'conic',
+    title: 'Informe detallado de la clasificación de cónicas',
+    subtitle: 'Con los datos actuales no hay una parte cuadrática no nula.',
+    statusLabel: 'Datos no cuadráticos',
+    generatedAt: createGeneratedAtLabel(),
+    highlights: [
+      textFact('Estado', 'No es una cónica de segundo grado'),
+      mathFact('\\widetilde Q', matrixTex(matrix), true),
+      textFact('Qué falta', 'Hacer no nulo alguno de a, b o c'),
+    ],
+    sections: [
+      section('datos', 'Datos', 'Ecuación introducida', [
+        paragraph('El capítulo 9 trabaja con ecuaciones de segundo grado. Aquí la comprobación inicial falla porque la matriz de la parte cuadrática es nula.'),
+        math(formatConicEquationTex(coefficients)),
+        conicCoefficientFacts(input),
+        math(`\\widetilde Q=${matrixTex(matrix)}`),
+      ]),
+      section('diagnostico', 'Diagnóstico', 'Por qué no se puede clasificar', [
+        paragraph('Una cónica del capítulo se escribe como $ax^2+2bxy+cy^2+2dx+2ey+f=0$ con $(a,b,c)\\ne(0,0,0)$. Si esos tres coeficientes son cero, la ecuación ya no tiene grado dos.'),
+        note('Ajusta a, b o c para activar la clasificación afín y euclídea.', 'warning'),
+      ]),
+    ],
+  }
+}
+
+function conicReductionBlocks(reduction: ConicReductionData): ReportBlock[] {
+  const blocks: ReportBlock[] = [
+    paragraph('La reducción euclídea empieza con el cambio ortogonal a ejes principales: se diagonaliza $Q$ y se proyecta el vector lineal sobre esa base ortonormal.'),
+    math(`P=${matrixTex(reduction.principalMatrix)},\\qquad P^TQP=\\begin{pmatrix}${formatTexNumber(reduction.eigenvalues[0])} & 0\\\\0 & ${formatTexNumber(reduction.eigenvalues[1])}\\end{pmatrix}`),
+    math(`P^T\\ell=${vectorTex(reduction.linearInPrincipal)}`),
+  ]
+
+  if (reduction.rankCase === 'full') {
+    blocks.push(
+      paragraph('Como $Q$ tiene rango dos, se completan cuadrados en las dos variables. Esto produce una cónica central.'),
+      math(`f''=${formatTexNumber(reduction.residualConstant ?? 0)},\\qquad k=-f''=${formatTexNumber(reduction.k ?? 0)}`),
+    )
+
+    if (reduction.center) {
+      blocks.push(math(`c=-Q^{-1}\\ell=${vectorTex(reduction.center)}`))
+    }
+
+    return blocks
+  }
+
+  if (reduction.rankCase === 'rank-one') {
+    blocks.push(
+      paragraph('Como $Q$ tiene rango uno, sólo se completa el cuadrado en la dirección con autovalor no nulo. La dirección nula decide si queda una parábola o un caso degenerado paralelo.'),
+      facts([
+        mathFact('\\lambda', formatTexNumber(reduction.nonzeroEigenvalue ?? 0)),
+        mathFact("d'", formatTexNumber(reduction.nonzeroLinearCoefficient ?? 0)),
+        mathFact("\\alpha", formatTexNumber(reduction.nullLinearCoefficient ?? 0)),
+        mathFact("f''", formatTexNumber(reduction.residualConstant ?? 0)),
+      ]),
+    )
+
+    if (reduction.vertex) {
+      blocks.push(math(`v=${vectorTex(reduction.vertex)}`))
+    }
+
+    return blocks
+  }
+
+  blocks.push(note('No se puede ejecutar la reducción porque la parte cuadrática es nula.', 'warning'))
+  return blocks
+}
+
+export function buildConicReportDocument(input: ConicReportInput): PrintableReportDocument {
+  const analysis = input.conicAnalysis
+
+  if (!analysis.valid) {
+    return invalidConicDocument(input)
+  }
+
+  const selectedCanonical = input.normalMode === 'affine' ? analysis.affineCanonical : analysis.euclideanCanonical
+  const canonicalModeLabel = input.normalMode === 'affine' ? 'Afín' : 'Euclídea'
+
+  return {
+    kind: 'conic',
+    title: 'Informe detallado de la clasificación de cónicas',
+    subtitle: 'Clasificación afín y euclídea siguiendo el procedimiento del capítulo 9.',
+    statusLabel: analysis.caseLabel,
+    generatedAt: createGeneratedAtLabel(),
+    highlights: [
+      textFact('Tipo afín', analysis.affineLabel),
+      textFact('Tipo euclídeo', analysis.euclideanLabel),
+      mathFact('\\delta=\\det(Q)', formatTexNumber(analysis.determinantQ)),
+      mathFact('\\Delta=\\det(\\widetilde Q)', formatTexNumber(analysis.determinantAugmented)),
+    ],
+    sections: [
+      section('datos', 'Paso 1', 'Ecuación, coeficientes y matriz ampliada', [
+        paragraph('Partimos de la convención del capítulo 9: los términos mixto y lineales se escriben con factor 2 para que la matriz simétrica salga sin fracciones artificiales.'),
+        math(formatConicEquationTex(input.conicCoefficients)),
+        conicCoefficientFacts(input),
+        math(`Q=${matrixTex(analysis.quadraticMatrix)},\\qquad \\ell=${vectorTex(analysis.linearVector)},\\qquad \\widetilde Q=${matrixTex(analysis.augmentedMatrix)}`),
+      ], 'Estos son los datos algebraicos que determinan la cónica representante.'),
+      section('invariantes', 'Paso 2', 'Invariantes afines', [
+        paragraph('Bajo un cambio afín invertible se conservan el rango y la inercia de $Q$, y también el rango de $\\widetilde Q$. El signo de $\\Delta=\\det(\\widetilde Q)$ separa los casos degenerados y no degenerados.'),
+        facts([
+          mathFact('\\sigma=\\operatorname{tr}(Q)', formatTexNumber(analysis.trace)),
+          mathFact('\\delta=\\det(Q)', formatTexNumber(analysis.determinantQ)),
+          mathFact('\\Delta=\\det(\\widetilde Q)', formatTexNumber(analysis.determinantAugmented)),
+          mathFact('\\operatorname{rk}(Q)', formatTexNumber(analysis.rankQ)),
+          mathFact('\\operatorname{rk}(\\widetilde Q)', formatTexNumber(analysis.rankAugmented)),
+          textFact('Inercia de Q', `(${analysis.inertia.positive}, ${analysis.inertia.negative}, ${analysis.inertia.zero})`),
+        ]),
+      ], 'La clasificación afín se lee a partir de estos números.'),
+      section('clasificacion-afin', 'Paso 3', 'Clasificación afín', [
+        paragraph('Aplicamos los criterios del capítulo 9: si $\\Delta\\ne0$ la cónica es no degenerada; si $\\Delta=0$ se entra en la tabla de casos degenerados.'),
+        facts([
+          textFact('Tipo', analysis.caseLabel),
+          textFact('Degeneración', analysis.degeneracyLabel),
+          textFact('Lugar real', analysis.setDescription),
+          mathFact('Forma canónica afín', analysis.affineCanonical.equationTex),
+        ]),
+        list(analysis.steps),
+      ], analysis.shortText),
+      section('reduccion-euclidea', 'Paso 4', 'Reducción euclídea por ejes principales', conicReductionBlocks(analysis.reduction), 'Aquí aparecen los ejes principales y el paso de completar cuadrados.'),
+      section('forma-euclidea', 'Paso 5', 'Forma canónica euclídea', [
+        paragraph('La clasificación euclídea conserva más información que la afín. Por eso, dentro del mismo tipo afín, pueden aparecer semiejes, parámetro de parábola, distancia entre rectas o ángulo.'),
+        facts([
+          mathFact('Forma canónica euclídea', analysis.euclideanCanonical.equationTex),
+          ...conicCanonicalParameterFacts(analysis.euclideanCanonical),
+        ]),
+      ], 'Estos parámetros no cambian si se mueve rígidamente la cónica ni si se reescala la ecuación representante.'),
+      section('normalizacion-seleccionada', 'Vista', `Normalización mostrada: ${canonicalModeLabel}`, [
+        paragraph('La segunda ventana de la aplicación muestra la versión normalizada elegida por el usuario. La clasificación completa conserva simultáneamente las dos lecturas.'),
+        facts([
+          textFact('Modo', canonicalModeLabel),
+          textFact('Etiqueta', selectedCanonical.label),
+          mathFact('Ecuación normalizada', selectedCanonical.equationTex),
+          ...conicCanonicalParameterFacts(selectedCanonical),
+        ]),
+      ]),
+      section('resumen', 'Resumen', 'Resumen', [
+        paragraph('La cadena de cálculo queda así:'),
+        list([
+          'Escribir la ecuación como $z^TQz+2\\ell^Tz+f=0$ y reunir todos los datos en $\\widetilde Q$.',
+          'Calcular $\\delta=\\det(Q)$, $\\Delta=\\det(\\widetilde Q)$, los rangos y la inercia de $Q$.',
+          'Usar la tabla afín: $\\Delta\\ne0$ da los casos no degenerados y $\\Delta=0$ los degenerados.',
+          'Diagonalizar ortogonalmente $Q$, completar cuadrados y leer la forma euclídea con sus parámetros.',
+          'Comparar la forma afín sin parámetros con la forma euclídea, que conserva longitudes, distancias o ángulos según el caso.',
+        ]),
+      ]),
+    ],
+    closingFacts: [
+      textFact('Tipo', analysis.caseLabel),
+      mathFact('Afín', analysis.affineCanonical.equationTex),
+      mathFact('Euclídea', analysis.euclideanCanonical.equationTex),
     ],
   }
 }

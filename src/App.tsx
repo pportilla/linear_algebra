@@ -3,10 +3,14 @@ import katex from 'katex'
 import 'katex/dist/katex.min.css'
 import './App.css'
 import { CartesianPlane } from './components/CartesianPlane'
+import { ConicPlane } from './components/ConicPlane'
 import {
   applyAffine,
   canonicalizeAffineMap,
+  classifyConic,
+  conicMatrixFromCoefficients,
   classifyLinearMap,
+  formatConicEquationTex,
   formatMatrixEntry,
   isAffineConfigurationValid,
   linearMapFromBasis,
@@ -14,8 +18,8 @@ import {
   pointAreaTwice,
   subtractVectors,
 } from './lib/math2d'
-import { openAffinePrintableReport, openLinearPrintableReport } from './lib/reportExport'
-import type { LinearPointId, PointId, Vec2 } from './lib/math2d'
+import { openAffinePrintableReport, openConicPrintableReport, openLinearPrintableReport } from './lib/reportExport'
+import type { ConicCoefficients, ConicNormalMode, LinearPointId, PointId, Vec2 } from './lib/math2d'
 
 const initialLinearPoints: Record<LinearPointId, Vec2> = {
   b1: { x: 2, y: 0.5 },
@@ -36,7 +40,16 @@ const initialAffineImages: Record<'q0' | 'q1' | 'q2', Vec2> = {
   q2: { x: -0.25, y: 3.25 },
 }
 
-type TabId = 'lineal' | 'afin'
+const initialConicCoefficients: ConicCoefficients = {
+  a: 5,
+  b: 2,
+  c: 8,
+  d: -16,
+  e: -28,
+  f: 80,
+}
+
+type TabId = 'lineal' | 'afin' | 'conicas'
 
 function renderMath(tex: string) {
   return {
@@ -112,6 +125,34 @@ function CoordinateCard({
   )
 }
 
+function ConicCoefficientInput({
+  label,
+  value,
+  onChange,
+}: {
+  label: keyof ConicCoefficients
+  value: number
+  onChange: (value: number) => void
+}) {
+  return (
+    <label className="coefficient-input">
+      <span>{label}</span>
+      <input
+        type="number"
+        step="0.25"
+        value={value}
+        onChange={(event) => onChange(Number(event.target.value))}
+      />
+    </label>
+  )
+}
+
+const augmentedEntryMap: Array<Array<keyof ConicCoefficients>> = [
+  ['f', 'd', 'e'],
+  ['d', 'a', 'b'],
+  ['e', 'b', 'c'],
+]
+
 function App() {
   const pdfApiBaseUrl = (import.meta.env.VITE_PDF_API_BASE_URL ?? '').trim()
   const localHostname = typeof window !== 'undefined' && ['localhost', '127.0.0.1'].includes(window.location.hostname)
@@ -129,6 +170,11 @@ function App() {
   const [affinePdfStatus, setAffinePdfStatus] = useState<'idle' | 'loading' | 'error'>('idle')
   const [affinePdfMessage, setAffinePdfMessage] = useState('')
 
+  const [conicCoefficients, setConicCoefficients] = useState<ConicCoefficients>(initialConicCoefficients)
+  const [conicNormalMode, setConicNormalMode] = useState<ConicNormalMode>('euclidean')
+  const [conicReportStatus, setConicReportStatus] = useState<'idle' | 'loading' | 'error'>('idle')
+  const [conicReportMessage, setConicReportMessage] = useState('')
+
   const linearData = linearMapFromBasis(linearPoints.b1, linearPoints.b2, linearPoints.tb1, linearPoints.tb2)
   const linearAnalysis = linearData ? classifyLinearMap(linearData.matrix) : null
   const affineDraftValid = isAffineConfigurationValid(affineSource.p0, affineSource.p1, affineSource.p2)
@@ -136,6 +182,10 @@ function App() {
   const affineSide1 = subtractVectors(affineSource.p1, affineSource.p0)
   const affineSide2 = subtractVectors(affineSource.p2, affineSource.p0)
   const affineAnalysis = affineDraftValid ? canonicalizeAffineMap(affineSource, affineImages) : null
+  const conicAnalysis = classifyConic(conicCoefficients)
+  const conicAugmentedMatrix = conicMatrixFromCoefficients(conicCoefficients)
+  const selectedConicCanonical = conicNormalMode === 'affine' ? conicAnalysis.affineCanonical : conicAnalysis.euclideanCanonical
+  const conicSignature = `${Object.values(conicCoefficients).join(',')}:${conicAnalysis.caseId}`
 
   useEffect(() => {
     if (pdfApiBaseUrl.length > 0) {
@@ -188,6 +238,14 @@ function App() {
     setAffineImages((current) => ({ ...current, [target]: point }))
   }
 
+  const updateConicCoefficient = (target: keyof ConicCoefficients, value: number) => {
+    setConicCoefficients((current) => ({ ...current, [target]: Number.isFinite(value) ? value : 0 }))
+  }
+
+  const updateConicMatrixEntry = (row: number, column: number, value: number) => {
+    updateConicCoefficient(augmentedEntryMap[row][column], value)
+  }
+
   const resetLinearState = () => {
     setLinearPoints(initialLinearPoints)
     setActiveLinearPoint('b1')
@@ -201,6 +259,13 @@ function App() {
     setActiveAffinePoint('p0')
     setAffinePdfStatus('idle')
     setAffinePdfMessage('')
+  }
+
+  const resetConicState = () => {
+    setConicCoefficients(initialConicCoefficients)
+    setConicNormalMode('euclidean')
+    setConicReportStatus('idle')
+    setConicReportMessage('')
   }
 
   const downloadLinearPdf = async () => {
@@ -309,6 +374,24 @@ function App() {
     }
   }
 
+  const openConicReport = async () => {
+    setConicReportStatus('loading')
+    setConicReportMessage('')
+
+    try {
+      await openConicPrintableReport({
+        conicCoefficients,
+        conicAnalysis,
+        normalMode: conicNormalMode,
+      })
+      setConicReportStatus('idle')
+      setConicReportMessage('')
+    } catch (error) {
+      setConicReportStatus('error')
+      setConicReportMessage(error instanceof Error ? error.message : 'No se pudo abrir el informe de cónicas.')
+    }
+  }
+
   const canonicalLinearItems = linearAnalysis
     ? [
         { id: 'u1', label: 'u1', point: { x: 1, y: 0 }, color: '#62656d', kind: 'vector' as const, lineDash: '7 6' },
@@ -362,7 +445,7 @@ function App() {
             <span aria-label="R cuadrado" dangerouslySetInnerHTML={renderMath('\\mathbb{R}^2')} />
           </h1>
           <p className="hero-copy">
-            Aplicaciones lineales y afines, forma canónica y puntos fijos en <MathText tex={"\\mathbb{R}^2"} ariaLabel="R cuadrado" />.
+            Aplicaciones lineales, afines y cónicas, con formas canónicas en <MathText tex={"\\mathbb{R}^2"} ariaLabel="R cuadrado" />.
           </p>
         </div>
       </header>
@@ -374,6 +457,9 @@ function App() {
           </button>
           <button type="button" role="tab" aria-selected={activeTab === 'afin'} className={`tab-button ${activeTab === 'afin' ? 'is-selected' : ''}`} onClick={() => setActiveTab('afin')}>
             Afín
+          </button>
+          <button type="button" role="tab" aria-selected={activeTab === 'conicas'} className={`tab-button ${activeTab === 'conicas' ? 'is-selected' : ''}`} onClick={() => setActiveTab('conicas')}>
+            Cónicas
           </button>
         </div>
       </section>
@@ -485,7 +571,7 @@ function App() {
             </div>
           </div>
         </section>
-      ) : (
+      ) : activeTab === 'afin' ? (
         <section className="module-card">
           <div className="module-head">
             <div>
@@ -612,6 +698,142 @@ function App() {
                         'Esa condición garantiza que forman una referencia afín de R².',
                         'Sólo en ese caso se puede reconstruir de forma única la aplicación afín que envía cada punto origen a su imagen.',
                       ].map((step) => <li key={step}>{step}</li>)}
+                </ol>
+              </div>
+            </div>
+          </div>
+        </section>
+      ) : (
+        <section className="module-card">
+          <div className="module-head">
+            <div>
+              <span className="eyebrow">Cónicas</span>
+              <h2>Clasificación afín y euclídea</h2>
+            </div>
+            <div className="actions-row">
+              <button type="button" className="ghost-button" onClick={resetConicState}>
+                Restablecer ejemplo
+              </button>
+              <button type="button" className="secondary-button" onClick={openConicReport} disabled={conicReportStatus === 'loading'}>
+                {conicReportStatus === 'loading' ? 'Abriendo informe...' : 'Abrir informe detallado'}
+              </button>
+            </div>
+          </div>
+
+          <div className="module-layout">
+            <aside className="control-panel">
+              <div className="group-card">
+                <span className="eyebrow">Coeficientes</span>
+                <MathText tex={formatConicEquationTex(conicCoefficients)} ariaLabel="Ecuación de la cónica" className="conic-equation" />
+                <div className="coefficient-grid">
+                  {(['a', 'b', 'c', 'd', 'e', 'f'] as const).map((id) => (
+                    <ConicCoefficientInput
+                      key={id}
+                      label={id}
+                      value={conicCoefficients[id]}
+                      onChange={(value) => updateConicCoefficient(id, value)}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <div className="group-card">
+                <span className="eyebrow">Matriz ampliada</span>
+                <div className="augmented-matrix-grid" aria-label="Matriz ampliada de la cónica">
+                  {conicAugmentedMatrix.map((row, rowIndex) =>
+                    row.map((value, columnIndex) => (
+                      <input
+                        key={`${rowIndex}-${columnIndex}`}
+                        type="number"
+                        step="0.25"
+                        value={value}
+                        aria-label={`Entrada ${rowIndex + 1}, ${columnIndex + 1}`}
+                        onChange={(event) => updateConicMatrixEntry(rowIndex, columnIndex, Number(event.target.value))}
+                      />
+                    )),
+                  )}
+                </div>
+              </div>
+
+              <div className={`summary-card ${conicAnalysis.valid ? '' : 'warning-card'}`}>
+                <span className="eyebrow">Invariantes</span>
+                <p>Tipo: <strong>{conicAnalysis.caseLabel}</strong></p>
+                <p>δ = det(Q): <strong>{formatMatrixEntry(conicAnalysis.determinantQ)}</strong></p>
+                <p>Δ = det(Q~): <strong>{formatMatrixEntry(conicAnalysis.determinantAugmented)}</strong></p>
+                <p>Rangos: <strong>rk(Q) = {conicAnalysis.rankQ}, rk(Q~) = {conicAnalysis.rankAugmented}</strong></p>
+                <p>{conicAnalysis.shortText}</p>
+              </div>
+
+              <div className="group-card">
+                <span className="eyebrow">Normalización</span>
+                <div className="normal-mode-switch" role="group" aria-label="Tipo de forma normal">
+                  <button
+                    type="button"
+                    className={`mode-button ${conicNormalMode === 'affine' ? 'is-selected' : ''}`}
+                    onClick={() => setConicNormalMode('affine')}
+                  >
+                    Afín
+                  </button>
+                  <button
+                    type="button"
+                    className={`mode-button ${conicNormalMode === 'euclidean' ? 'is-selected' : ''}`}
+                    onClick={() => setConicNormalMode('euclidean')}
+                  >
+                    Euclídea
+                  </button>
+                </div>
+                <p className="plane-caption">{selectedConicCanonical.label}</p>
+                <MathText tex={selectedConicCanonical.equationTex} ariaLabel="Ecuación normalizada" className="conic-equation" />
+              </div>
+
+              {conicReportMessage ? <p className="error-text">{conicReportMessage}</p> : null}
+            </aside>
+
+            <div className="visual-panel">
+              <div className="plane-stack">
+                <ConicPlane
+                  key={`original-${conicSignature}`}
+                  title={
+                    <>
+                      <span>Cónica en </span>
+                      <MathText tex={"\\mathbb{R}^2"} ariaLabel="R cuadrado" />
+                    </>
+                  }
+                  subtitle={conicAnalysis.valid ? conicAnalysis.setDescription : 'La parte cuadrática es nula.'}
+                  ariaLabel="Cónica definida por la ecuación del usuario"
+                  coefficients={conicCoefficients}
+                  drawable={conicAnalysis.originalDrawable}
+                  strokeColor="#127b75"
+                />
+                <ConicPlane
+                  key={`normal-${conicNormalMode}-${selectedConicCanonical.equationTex}-${conicAnalysis.caseId}`}
+                  title={
+                    <>
+                      <span>Forma normal en </span>
+                      <MathText tex={"\\mathbb{R}^2"} ariaLabel="R cuadrado" />
+                    </>
+                  }
+                  subtitle={selectedConicCanonical.label}
+                  ariaLabel="Forma normal de la cónica"
+                  coefficients={selectedConicCanonical.coefficients}
+                  drawable={selectedConicCanonical.drawable}
+                  strokeColor="#b55233"
+                />
+              </div>
+
+              <div className="results-grid conic-results-grid">
+                <MatrixBlock title="Matriz Q" rows={matrixToRows(conicAnalysis.quadraticMatrix)} />
+                <MatrixBlock title="Matriz ampliada Q~" rows={conicAnalysis.augmentedMatrix} />
+              </div>
+
+              <div className="steps-card">
+                <span className="eyebrow">Clasificación de cónicas</span>
+                <h3>{conicAnalysis.caseLabel}</h3>
+                <p>{conicAnalysis.setDescription}</p>
+                <ol>
+                  {conicAnalysis.steps.map((step) => (
+                    <li key={step}>{step}</li>
+                  ))}
                 </ol>
               </div>
             </div>

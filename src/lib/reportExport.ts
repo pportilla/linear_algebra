@@ -1,5 +1,6 @@
 import type {
   AffineReportInput,
+  ConicReportInput,
   LinearReportInput,
   PrintableReportDocument,
   ReportTexDownload,
@@ -165,6 +166,12 @@ export async function openAffinePrintableReport(input: AffineReportInput) {
       : undefined
 
   openReportPage(withTexDownload(document, texDownload))
+}
+
+export async function openConicPrintableReport(input: ConicReportInput) {
+  const { buildConicReportDocument } = await import('./reportContent')
+  const document = buildConicReportDocument(input)
+  openReportPage(document)
 }
 
 export function loadStoredReportDocument(reportId: string) {
